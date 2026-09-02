@@ -95,7 +95,7 @@ def _raw_file_response(data_bytes, filename):
 PLUGIN_ID = "astrbot_plugin_xbbot"
 PLUGIN_DESC = "小白(奴/签/银/娱/私/灵/骑/超管/帮派/冒险+主菜单+WebUI), 现代SQLite存储"
 PLUGIN_AUTHOR = "Light"
-PLUGIN_VERSION = "0.67.7"
+PLUGIN_VERSION = "0.67.8"
 PLUGIN_REPO = "https://github.com/emmfax/xb"
 
 # 复用 router 的主菜单，保持单源
@@ -536,8 +536,9 @@ class XbBot(Star):
 
     async def page_rank(self, request=None, *args, **kwargs):
         try:
+            req = request if request is not None else (args[0] if args else None)
             from .core.api.stats import handle_rank
-            return await handle_rank(request)
+            return await handle_rank(req)
         except Exception as e:
             return _err(f"rank failed: {e}", 500)
 

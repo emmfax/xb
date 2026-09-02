@@ -50,8 +50,9 @@ async def handle_stats(request=None):
     })
 
 
-async def handle_rank(request):
-    rtype = request.query.get("type", "money")
+async def handle_rank(request=None):
+    from .helpers import get_req_query
+    rtype = get_req_query(request, "type", "money")
     if rtype == "tili":
         rtype = "stamina"
     if rtype == "meili":
