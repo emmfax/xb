@@ -1165,11 +1165,6 @@
         "type": "int",
         "description": "坐骑-私人航空价格",
         "default": 4000000
-      },
-      "价格_女仆": {
-        "type": "int",
-        "description": "坐骑-女仆价格",
-        "default": 8000000
       }
     }
   },
