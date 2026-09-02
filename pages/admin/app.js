@@ -1375,7 +1375,7 @@ async function exportAllUsers() {
         count: usersList.length,
         users: usersList,
         export_at: res.export_at || Math.floor(Date.now() / 1000),
-        version: res.version || "v0.67"
+        version: res.version || "v0.67.1"
       };
       const jsonStr = JSON.stringify(payload, null, 2);
       triggerExportResult({
@@ -3088,11 +3088,11 @@ async function loadAnalytics() {
     const el = (id) => document.getElementById(id);
     if (el("anaTotalUsers")) el("anaTotalUsers").textContent = `${fmt(sum.total_users)} 人`;
     if (el("anaTotalGroups")) el("anaTotalGroups").textContent = `开通群聊: ${fmt(sum.total_groups)} 个`;
-    if (el("anaTotalEconomy")) el("anaTotalEconomy").textContent = fmt(sum.total_economy_pool) + " 金币";
-    if (el("anaAvgMoney")) el("anaAvgMoney").textContent = `人均资产: ${fmt(sum.avg_money_per_user)} 金币`;
-    if (el("anaBankDeposit")) el("anaBankDeposit").textContent = fmt(sum.total_bank_deposit) + " 金币";
+    if (el("anaTotalEconomy")) el("anaTotalEconomy").textContent = fmt(sum.total_economy_pool);
+    if (el("anaAvgMoney")) el("anaAvgMoney").textContent = `人均资产: ${fmt(sum.avg_money_per_user)}`;
+    if (el("anaBankDeposit")) el("anaBankDeposit").textContent = fmt(sum.total_bank_deposit);
     if (el("anaBankUsers")) el("anaBankUsers").textContent = `储蓄玩家: ${fmt(sum.total_bank_users)} 人`;
-    if (el("anaSlaveWorth")) el("anaSlaveWorth").textContent = fmt(sum.total_slave_worth) + " 金币";
+    if (el("anaSlaveWorth")) el("anaSlaveWorth").textContent = fmt(sum.total_slave_worth);
     if (el("anaSlaveCount")) el("anaSlaveCount").textContent = `奴隶: ${sum.total_slaves_count || 0} 人 / 奴隶主: ${sum.total_masters_count || 0} 人`;
     if (el("anaSignCount")) el("anaSignCount").textContent = `${fmt(sum.total_sign_count)} 次`;
     if (el("anaSignRate")) el("anaSignRate").textContent = `活跃度: 稳健`;

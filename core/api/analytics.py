@@ -37,10 +37,10 @@ async def handle_analytics_overview(request):
         # 2. 财富阶层分布 (贫困 <1k, 小康 1k-10k, 富裕 10k-100k, 巨富 >100k)
         cur.execute("""
             SELECT 
-                SUM(CASE WHEN money < 1000 THEN 1 ELSE 0 END),
-                SUM(CASE WHEN money >= 1000 AND money < 10000 THEN 1 ELSE 0 END),
-                SUM(CASE WHEN money >= 10000 AND money < 100000 THEN 1 ELSE 0 END),
-                SUM(CASE WHEN money >= 100000 THEN 1 ELSE 0 END)
+                SUM(CASE WHEN money < 10000 THEN 1 ELSE 0 END),
+                SUM(CASE WHEN money >= 10000 AND money < 50000 THEN 1 ELSE 0 END),
+                SUM(CASE WHEN money >= 50000 AND money < 200000 THEN 1 ELSE 0 END),
+                SUM(CASE WHEN money >= 200000 THEN 1 ELSE 0 END)
             FROM wallet
         """)
         row = cur.fetchone()
@@ -122,10 +122,10 @@ async def handle_analytics_overview(request):
                 "total_spirits_count": total_spirits_count
             },
             "tiers": [
-                {"tier": "poor", "label": "平民 (<1k)", "count": tier_poor, "color": "#94A3B8"},
-                {"tier": "mid", "label": "小康 (1k-10k)", "count": tier_mid, "color": "#3B82F6"},
-                {"tier": "rich", "label": "富裕 (10k-100k)", "count": tier_rich, "color": "#10B981"},
-                {"tier": "whale", "label": "巨富 (>100k)", "count": tier_whale, "color": "#F59E0B"}
+                {"tier": "poor", "label": "初入江湖 (<1万)", "count": tier_poor, "color": "#94A3B8"},
+                {"tier": "mid", "label": "小康之家 (1万-5万)", "count": tier_mid, "color": "#3B82F6"},
+                {"tier": "rich", "label": "富甲一方 (5万-20万)", "count": tier_rich, "color": "#10B981"},
+                {"tier": "whale", "label": "富可敌国 (>20万)", "count": tier_whale, "color": "#F59E0B"}
             ],
             "activity_24h": activity_curve
         }
