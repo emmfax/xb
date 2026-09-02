@@ -95,7 +95,7 @@ def _raw_file_response(data_bytes, filename):
 PLUGIN_ID = "astrbot_plugin_xbbot"
 PLUGIN_DESC = "小白(奴/签/银/娱/私/灵/骑/超管/帮派/冒险+主菜单+WebUI), 现代SQLite存储"
 PLUGIN_AUTHOR = "Light"
-PLUGIN_VERSION = "0.67.4"
+PLUGIN_VERSION = "0.67.5"
 PLUGIN_REPO = "https://github.com/emmfax/xb"
 
 # 复用 router 的主菜单，保持单源
@@ -527,49 +527,49 @@ class XbBot(Star):
             yield r
 
     # ---------- Pages APIs (薄委托 → core/api) ----------
-    async def page_stats(self):
+    async def page_stats(self, request=None, *args, **kwargs):
         try:
             from .core.api.stats import handle_stats
             return await handle_stats()
         except Exception as e:
             return _err(f"stats failed: {e}", 500)
 
-    async def page_rank(self):
+    async def page_rank(self, request=None, *args, **kwargs):
         try:
             from .core.api.stats import handle_rank
             return await handle_rank(request)
         except Exception as e:
             return _err(f"rank failed: {e}", 500)
 
-    async def page_cfg_schema(self):
+    async def page_cfg_schema(self, request=None, *args, **kwargs):
         try:
             from .core.api.config_api import handle_cfg_schema
             return await handle_cfg_schema(request, os.path.dirname(os.path.abspath(__file__)))
         except Exception:
             return json_response(_load_schema())
 
-    async def page_commands(self):
+    async def page_commands(self, request=None, *args, **kwargs):
         try:
             from .core.api.config_api import handle_commands
             return await handle_commands(request, os.path.dirname(os.path.abspath(__file__)))
         except Exception:
             return json_response(_collect_commands())
 
-    async def page_users(self):
+    async def page_users(self, request=None, *args, **kwargs):
         try:
             from .core.api.users import handle_users
             return await handle_users(request)
         except Exception as e:
             return _err(f"users failed: {e}", 500)
 
-    async def page_user_edit(self):
+    async def page_user_edit(self, request=None, *args, **kwargs):
         try:
             from .core.api.users import handle_user_edit
             return await handle_user_edit(request)
         except Exception as e:
             return _err(f"edit failed: {e}", 500)
 
-    async def page_user_export(self):
+    async def page_user_export(self, request=None, *args, **kwargs):
         # _raw_file_response is_raw 保留关键字以兼容 test_fix 检测
         try:
             from .core.api.users import handle_user_export
@@ -577,14 +577,14 @@ class XbBot(Star):
         except Exception as e:
             return _err(f"export failed: {e}", 500)
 
-    async def page_user_import(self):
+    async def page_user_import(self, request=None, *args, **kwargs):
         try:
             from .core.api.users import handle_user_import
             return await handle_user_import(request)
         except Exception as e:
             return _err(f"import failed: {e}", 500)
 
-    async def page_users_export(self):
+    async def page_users_export(self, request=None, *args, **kwargs):
         # is_raw _raw_file_response raw 关键字保留
         try:
             from .core.api.users import handle_users_export
@@ -592,35 +592,35 @@ class XbBot(Star):
         except Exception as e:
             return _err(f"export failed: {e}", 500)
 
-    async def page_users_import(self):
+    async def page_users_import(self, request=None, *args, **kwargs):
         try:
             from .core.api.users import handle_users_import
             return await handle_users_import(request)
         except Exception as e:
             return _err(f"import failed: {e}", 500)
 
-    async def page_users_clean_left(self):
+    async def page_users_clean_left(self, request=None, *args, **kwargs):
         try:
             from .core.api.users import handle_users_clean_left
             return await handle_users_clean_left(request, getattr(self, 'context', None))
         except Exception as e:
             return _err(f"clean left users failed: {e}", 500)
 
-    async def page_cfg_get(self):
+    async def page_cfg_get(self, request=None, *args, **kwargs):
         try:
             from .core.api.config_api import handle_cfg_get
             return await handle_cfg_get(request)
         except Exception as e:
             return _err(f"get failed: {e}", 500)
 
-    async def page_cfg_save(self):
+    async def page_cfg_save(self, request=None, *args, **kwargs):
         try:
             from .core.api.config_api import handle_cfg_save
             return await handle_cfg_save(request, os.path.dirname(os.path.abspath(__file__)))
         except Exception as e:
             return _err(f"save failed: {e}", 500)
 
-    async def page_config_auto_balance(self):
+    async def page_config_auto_balance(self, request=None, *args, **kwargs):
         try:
             from .core.api.config_api import handle_config_auto_balance
             return await handle_config_auto_balance(request)
@@ -628,49 +628,49 @@ class XbBot(Star):
             return _err(f"auto balance failed: {e}", 500)
 
 
-    async def page_analytics_overview(self):
+    async def page_analytics_overview(self, request=None, *args, **kwargs):
         try:
             from .core.api.analytics import handle_analytics_overview
             return await handle_analytics_overview(request)
         except Exception as e:
             return _err(f"analytics failed: {e}", 500)
 
-    async def page_users_airdrop(self):
+    async def page_users_airdrop(self, request=None, *args, **kwargs):
         try:
             from .core.api.users import handle_users_airdrop
             return await handle_users_airdrop(request)
         except Exception as e:
             return _err(f"airdrop failed: {e}", 500)
 
-    async def page_spirits_get(self):
+    async def page_spirits_get(self, request=None, *args, **kwargs):
         try:
             from .core.api.game import handle_spirits_get
             return await handle_spirits_get(request)
         except Exception as e:
             return _err(f"spirits get failed: {e}", 500)
 
-    async def page_spirits_save(self):
+    async def page_spirits_save(self, request=None, *args, **kwargs):
         try:
             from .core.api.game import handle_spirits_save
             return await handle_spirits_save(request)
         except Exception as e:
             return _err(f"spirits save failed: {e}", 500)
 
-    async def page_slave_users(self):
+    async def page_slave_users(self, request=None, *args, **kwargs):
         try:
             from .core.api.game import handle_slave_users
             return await handle_slave_users(request)
         except Exception as e:
             return _err(f"slave users failed: {e}", 500)
 
-    async def page_slave_calibrate(self):
+    async def page_slave_calibrate(self, request=None, *args, **kwargs):
         try:
             from .core.api.game import handle_slave_calibrate
             return await handle_slave_calibrate(request)
         except Exception as e:
             return _err(f"slave calibrate failed: {e}", 500)
 
-    async def page_spirit_users(self):
+    async def page_spirit_users(self, request=None, *args, **kwargs):
         # total_power spirit/users 关键字保留以兼容检测
         try:
             from .core.api.game import handle_spirit_users
@@ -678,35 +678,35 @@ class XbBot(Star):
         except Exception as e:
             return _err(f"spirit users failed: {e}", 500)
 
-    async def page_backups_list(self):
+    async def page_backups_list(self, request=None, *args, **kwargs):
         try:
             from .core.api.backup import handle_backups_list
             return await handle_backups_list(request, os.path.dirname(os.path.abspath(__file__)))
         except Exception as e:
             return _err(f"backups list failed: {e}", 500)
 
-    async def page_backups_restore(self):
+    async def page_backups_restore(self, request=None, *args, **kwargs):
         try:
             from .core.api.backup import handle_backups_restore
             return await handle_backups_restore(request, os.path.dirname(os.path.abspath(__file__)))
         except Exception as e:
             return _err(f"restore failed: {e}", 500)
 
-    async def page_backups_delete(self):
+    async def page_backups_delete(self, request=None, *args, **kwargs):
         try:
             from .core.api.backup import handle_backups_delete
             return await handle_backups_delete(request, os.path.dirname(os.path.abspath(__file__)))
         except Exception as e:
             return _err(f"delete failed: {e}", 500)
 
-    async def page_backups_export(self):
+    async def page_backups_export(self, request=None, *args, **kwargs):
         try:
             from .core.api.backup import handle_backups_export
             return await handle_backups_export(request, os.path.dirname(os.path.abspath(__file__)))
         except Exception as e:
             return _err(f"export failed: {e}", 500)
 
-    async def page_db_doctor(self):
+    async def page_db_doctor(self, request=None, *args, **kwargs):
         try:
             from .core.api.backup import handle_db_doctor
             return await handle_db_doctor(request, os.path.dirname(os.path.abspath(__file__)))
@@ -721,7 +721,7 @@ class XbBot(Star):
             return _err(f"version check failed: {e}", 500)
 
 
-    async def page_clear_all(self):
+    async def page_clear_all(self, request=None, *args, **kwargs):
         try:
             from .core.api.backup import handle_clear_all
             return await handle_clear_all(request, os.path.dirname(os.path.abspath(__file__)))
@@ -729,77 +729,77 @@ class XbBot(Star):
             return _err(f"clear failed: {e}", 500)
 
     # ---------- 图片库 ----------
-    async def page_images_list(self):
+    async def page_images_list(self, request=None, *args, **kwargs):
         try:
             from .core.api.images import handle_images_list
             return await handle_images_list(request, os.path.dirname(os.path.abspath(__file__)))
         except Exception as e:
             return _err(f"images list failed: {e}", 500)
 
-    async def page_images_upload(self):
+    async def page_images_upload(self, request=None, *args, **kwargs):
         try:
             from .core.api.images import handle_images_upload
             return await handle_images_upload(request, os.path.dirname(os.path.abspath(__file__)))
         except Exception as e:
             return _err(f"upload failed: {e}", 500)
 
-    async def page_images_delete(self):
+    async def page_images_delete(self, request=None, *args, **kwargs):
         try:
             from .core.api.images import handle_images_delete
             return await handle_images_delete(request, os.path.dirname(os.path.abspath(__file__)))
         except Exception as e:
             return _err(f"delete failed: {e}", 500)
 
-    async def page_images_rename(self):
+    async def page_images_rename(self, request=None, *args, **kwargs):
         try:
             from .core.api.images import handle_images_rename
             return await handle_images_rename(request, os.path.dirname(os.path.abspath(__file__)))
         except Exception as e:
             return _err(f"rename failed: {e}", 500)
 
-    async def page_images_mkdir(self):
+    async def page_images_mkdir(self, request=None, *args, **kwargs):
         try:
             from .core.api.images import handle_images_mkdir
             return await handle_images_mkdir(request, os.path.dirname(os.path.abspath(__file__)))
         except Exception as e:
             return _err(f"mkdir failed: {e}", 500)
 
-    async def page_images_copy(self):
+    async def page_images_copy(self, request=None, *args, **kwargs):
         try:
             from .core.api.images import handle_images_copy
             return await handle_images_copy(request, os.path.dirname(os.path.abspath(__file__)))
         except Exception as e:
             return _err(f"copy failed: {e}", 500)
 
-    async def page_images_export(self):
+    async def page_images_export(self, request=None, *args, **kwargs):
         try:
             from .core.api.images import handle_images_export
             return await handle_images_export(request, os.path.dirname(os.path.abspath(__file__)))
         except Exception as e:
             return _err(f"export failed: {e}", 500)
 
-    async def page_import_legacy(self):
+    async def page_import_legacy(self, request=None, *args, **kwargs):
         try:
             from .core.api.legacy import handle_import_legacy
             return await handle_import_legacy(request, os.path.dirname(os.path.abspath(__file__)))
         except Exception as e:
             return _err(f"legacy import failed: {e}", 500)
 
-    async def page_groups_list(self):
+    async def page_groups_list(self, request=None, *args, **kwargs):
         try:
             from .core.api.groups import handle_groups_list
             return await handle_groups_list(request)
         except Exception as e:
             return _err(f"groups list failed: {e}", 500)
 
-    async def page_groups_toggle(self):
+    async def page_groups_toggle(self, request=None, *args, **kwargs):
         try:
             from .core.api.groups import handle_groups_toggle
             return await handle_groups_toggle(request)
         except Exception as e:
             return _err(f"groups toggle failed: {e}", 500)
 
-    async def page_groups_delete(self):
+    async def page_groups_delete(self, request=None, *args, **kwargs):
         try:
             from .core.api.groups import handle_groups_delete
             return await handle_groups_delete(request)

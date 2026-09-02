@@ -387,15 +387,22 @@ def handle(gid, qq, raw, is_admin=False):
         return _version()
     if text == "检查更新":
         try:
-            from ..core.api.updater import handle_version_check
-            import asyncio
-            class _DummyReq: pass
-            res = asyncio.run(handle_version_check(_DummyReq()))
-            d = json.loads(res.body.decode("utf-8")) if hasattr(res, "body") else {}
-            cur_v = d.get("current_version", "0.67.4")
-            lat_v = d.get("latest_version", cur_v)
-            has_u = d.get("has_update", False)
-            if has_u:
+            cur_v = _version().replace("小白版本：", "").strip()
+            # 兼容同步请求，防止在运行中事件循环内调用 asyncio.run 报错
+            lat_v = ""
+            try:
+                import urllib.request
+                req = urllib.request.Request(
+                    "https://api.github.com/repos/emmfax/xb/releases/latest",
+                    headers={"User-Agent": "XbBot/1.0", "Accept": "application/vnd.github.v3+json"}
+                )
+                with urllib.request.urlopen(req, timeout=3) as resp:
+                    if resp.status == 200:
+                        data = json.loads(resp.read().decode("utf-8"))
+                        lat_v = data.get("tag_name") or data.get("name") or ""
+            except Exception:
+                pass
+            if lat_v and lat_v != cur_v and lat_v.replace("v", "") != cur_v.replace("v", ""):
                 return f"🚀 发现小白新版本【{lat_v}】(当前: {cur_v})\n可前往 AstrBot 插件管理面板一键更新！"
             return f"✅ 当前小白已是最新版本【{cur_v}】。"
         except Exception:

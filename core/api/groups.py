@@ -69,7 +69,7 @@ async def handle_groups_toggle(request):
         return json_response({"ok": True, "total_enabled": enabled})
 
     if not gid or not gid.isdigit():
-        return json_response({"ok": False, "msg": "群号必填且需为纯数字"}, status=400)
+        return json_response({"ok": False, "msg": "群号必填且需为纯数字"})
 
     ST._CONFIG.setdefault("群组开关配置", {})
     ST._CONFIG["群组开关配置"][gid] = "真" if enabled else "假"
@@ -100,7 +100,7 @@ async def handle_groups_delete(request):
             data = {}
     gid = str(data.get("gid", "") or data.get("group_id", "") or "").strip()
     if not gid or not gid.isdigit():
-        return json_response({"ok": False, "msg": "群号必填且需为纯数字"}, status=400)
+        return json_response({"ok": False, "msg": "群号必填且需为纯数字"})
     try:
         sec = ST._CONFIG.get("群组开关配置") if hasattr(ST, "_CONFIG") and isinstance(ST._CONFIG, dict) else {}
         if isinstance(sec, dict) and gid in sec:
