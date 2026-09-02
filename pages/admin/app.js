@@ -1166,7 +1166,7 @@ async function loadRank(type) {
     const rows = await getBridge().apiGet("rank", { type });
     const body = document.getElementById("rankBody");
     if (!rows.length) {
-      body.innerHTML = `<tr><td colspan="3">暂无数据</td></tr>`;
+      body.innerHTML = `<tr><td colspan="4" style="text-align:center;padding:24px;color:var(--muted)">暂无榜单数据</td></tr>`;
       return;
     }
     const rankBadges = ["🥇", "🥈", "🥉"];
@@ -1375,7 +1375,7 @@ async function exportAllUsers() {
         count: usersList.length,
         users: usersList,
         export_at: res.export_at || Math.floor(Date.now() / 1000),
-        version: res.version || "0.67.2"
+        version: res.version || "0.67.3"
       };
       const jsonStr = JSON.stringify(payload, null, 2);
       triggerExportResult({
