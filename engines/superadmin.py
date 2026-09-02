@@ -392,7 +392,7 @@ def handle(gid, qq, raw, is_admin=False):
             class _DummyReq: pass
             res = asyncio.run(handle_version_check(_DummyReq()))
             d = json.loads(res.body.decode("utf-8")) if hasattr(res, "body") else {}
-            cur_v = d.get("current_version", "v0.66")
+            cur_v = d.get("current_version", "v0.67")
             lat_v = d.get("latest_version", cur_v)
             has_u = d.get("has_update", False)
             if has_u:
