@@ -1,0 +1,1605 @@
+{
+  "设置": {
+    "type": "object",
+    "items": {
+      "税率": {
+        "type": "float",
+        "description": "交易税率(0.1=10%)",
+        "default": 0.02
+      },
+      "货币名称": {
+        "type": "string",
+        "description": "货币显示名称",
+        "default": "金币"
+      },
+      "奴隶个数": {
+        "type": "int",
+        "description": "初始奴隶位",
+        "default": 5
+      },
+      "奴隶个数上限": {
+        "type": "int",
+        "description": "奴隶位系统上限",
+        "default": 15
+      },
+      "奴隶位价格": {
+        "type": "int",
+        "description": "首个奴隶位价格",
+        "default": 5000
+      },
+      "奇遇触发概率": {
+        "type": "int",
+        "description": "奇遇触发概率%",
+        "default": 20
+      },
+      "宝物": {
+        "type": "string",
+        "description": "宝物列表(|分隔)",
+        "default": "酒神葫芦|四象护符"
+      },
+      "武器": {
+        "type": "string",
+        "description": "武器列表(|分隔)",
+        "default": "鬼泪村正|雷鸣剑|神使沧溟|炎宿朱雀|祝融|老八脑!|钻石剑"
+      },
+      "保护时长小时": {
+        "type": "string",
+        "description": "保护时长(小时)",
+        "default": ""
+      },
+      "保护费用": {
+        "type": "string",
+        "description": "保护费用",
+        "default": ""
+      },
+      "十连抽花费": {
+        "type": "int",
+        "description": "十连抽花费",
+        "default": 1500
+      },
+      "三十连抽花费": {
+        "type": "int",
+        "description": "三十连抽花费",
+        "default": 4000
+      },
+      "五十连抽花费": {
+        "type": "int",
+        "description": "五十连抽花费",
+        "default": 6000
+      },
+      "抽武器R概率": {
+        "type": "int",
+        "description": "R概率%",
+        "default": 45
+      },
+      "抽武器SR概率": {
+        "type": "int",
+        "description": "SR概率%",
+        "default": 40
+      },
+      "抽武器SSR概率": {
+        "type": "int",
+        "description": "SSR概率%",
+        "default": 15
+      },
+      "R经验": {
+        "type": "int",
+        "description": "R转化经验",
+        "default": 20
+      },
+      "SR经验": {
+        "type": "int",
+        "description": "SR转化经验",
+        "default": 200
+      },
+      "SSR经验": {
+        "type": "int",
+        "description": "SSR转化经验",
+        "default": 1000
+      },
+      "一星武器消耗同武器数量": {
+        "type": "int",
+        "description": "一星升星消耗同武器数",
+        "default": 1
+      },
+      "二星武器消耗同武器数量": {
+        "type": "int",
+        "description": "二星升星消耗同武器数",
+        "default": 1
+      },
+      "三星武器消耗同武器数量": {
+        "type": "int",
+        "description": "三星升星消耗同武器数",
+        "default": 1
+      },
+      "四星武器消耗同武器数量": {
+        "type": "int",
+        "description": "四星升星消耗同武器数",
+        "default": 1
+      },
+      "五星武器消耗同武器数量": {
+        "type": "int",
+        "description": "五星升星消耗同武器数",
+        "default": 1
+      },
+      "一星武器花费": {
+        "type": "int",
+        "description": "一星升星花费",
+        "default": 1000
+      },
+      "二星武器花费": {
+        "type": "int",
+        "description": "二星升星花费",
+        "default": 2500
+      },
+      "三星武器花费": {
+        "type": "int",
+        "description": "三星升星花费",
+        "default": 8000
+      },
+      "四星武器花费": {
+        "type": "int",
+        "description": "四星升星花费",
+        "default": 15000
+      },
+      "五星武器花费": {
+        "type": "int",
+        "description": "五星升星花费",
+        "default": 30000
+      },
+      "一星武器概率": {
+        "type": "int",
+        "description": "一星升星概率%",
+        "default": 90
+      },
+      "二星武器概率": {
+        "type": "int",
+        "description": "二星升星概率%",
+        "default": 75
+      },
+      "三星武器概率": {
+        "type": "int",
+        "description": "三星升星概率%",
+        "default": 60
+      },
+      "四星武器概率": {
+        "type": "int",
+        "description": "四星升星概率%",
+        "default": 45
+      },
+      "五星武器概率": {
+        "type": "int",
+        "description": "五星升星概率%",
+        "default": 30
+      },
+      "一星武器经验": {
+        "type": "int",
+        "description": "一星升星经验",
+        "default": 999
+      },
+      "二星武器经验": {
+        "type": "int",
+        "description": "二星升星经验",
+        "default": 1999
+      },
+      "三星武器经验": {
+        "type": "int",
+        "description": "三星升星经验",
+        "default": 2999
+      },
+      "四星武器经验": {
+        "type": "int",
+        "description": "四星升星经验",
+        "default": 3999
+      },
+      "五星武器经验": {
+        "type": "int",
+        "description": "五星升星经验",
+        "default": 4999
+      },
+      "一阶宝物消耗宝物数量": {
+        "type": "int",
+        "description": "一阶升阶消耗数量",
+        "default": 1
+      },
+      "二阶宝物消耗宝物数量": {
+        "type": "int",
+        "description": "二阶升阶消耗数量",
+        "default": 2
+      },
+      "三阶宝物消耗宝物数量": {
+        "type": "int",
+        "description": "三阶升阶消耗数量",
+        "default": 3
+      },
+      "一阶宝物花费": {
+        "type": "int",
+        "description": "一阶升阶花费",
+        "default": 5000
+      },
+      "二阶宝物花费": {
+        "type": "int",
+        "description": "二阶升阶花费",
+        "default": 12000
+      },
+      "三阶宝物花费": {
+        "type": "int",
+        "description": "三阶升阶花费",
+        "default": 25000
+      },
+      "一阶宝物概率": {
+        "type": "int",
+        "description": "一阶升阶概率%",
+        "default": 75
+      },
+      "二阶宝物概率": {
+        "type": "int",
+        "description": "二阶升阶概率%",
+        "default": 45
+      },
+      "三阶宝物概率": {
+        "type": "int",
+        "description": "三阶升阶概率%",
+        "default": 20
+      }
+    }
+  },
+  "费用配置": {
+    "type": "object",
+    "items": {
+      "初始身价": {
+        "type": "int",
+        "description": "",
+        "default": 1000
+      },
+      "打赏上限": {
+        "type": "int",
+        "description": "",
+        "default": 100000
+      },
+      "工资比例": {
+        "type": "int",
+        "description": "",
+        "default": 50
+      },
+      "变化上限": {
+        "type": "int",
+        "description": "",
+        "default": 1000
+      },
+      "变化下限": {
+        "type": "int",
+        "description": "",
+        "default": -200
+      }
+    }
+  },
+  "间隔配置": {
+    "type": "object",
+    "items": {
+      "购买间隔": {
+        "type": "int",
+        "description": "",
+        "default": 1
+      },
+      "折磨间隔": {
+        "type": "int",
+        "description": "",
+        "default": 1
+      },
+      "打赏间隔": {
+        "type": "int",
+        "description": "",
+        "default": 1
+      },
+      "讨好间隔": {
+        "type": "int",
+        "description": "",
+        "default": 1
+      },
+      "造反间隔": {
+        "type": "int",
+        "description": "",
+        "default": 1
+      },
+      "打工间隔": {
+        "type": "int",
+        "description": "",
+        "default": 1
+      },
+      "保护间隔": {
+        "type": "int",
+        "description": "",
+        "default": 5
+      },
+      "打架间隔": {
+        "type": "int",
+        "description": "",
+        "default": 1
+      },
+      "学习间隔": {
+        "type": "int",
+        "description": "",
+        "default": 1
+      },
+      "货币间隔": {
+        "type": "int",
+        "description": "",
+        "default": 1
+      }
+    }
+  },
+  "概率配置": {
+    "type": "object",
+    "items": {
+      "讨好概率": {
+        "type": "int",
+        "description": "",
+        "default": 80
+      },
+      "造反概率": {
+        "type": "int",
+        "description": "",
+        "default": 20
+      }
+    }
+  },
+  "祈福配置": {
+    "type": "object",
+    "items": {
+      "祈福奖励下限": {
+        "type": "int",
+        "description": "",
+        "default": 1000
+      },
+      "祈福奖励上限": {
+        "type": "int",
+        "description": "",
+        "default": 6000
+      },
+      "人品爆发概率": {
+        "type": "int",
+        "description": "",
+        "default": 15
+      },
+      "人品爆发奖励": {
+        "type": "int",
+        "description": "",
+        "default": 30000
+      }
+    }
+  },
+  "起名配置": {
+    "type": "object",
+    "items": {
+      "起名开关": {
+        "type": "string",
+        "description": "",
+        "default": "真"
+      },
+      "起名费用": {
+        "type": "int",
+        "description": "",
+        "default": 200
+      }
+    }
+  },
+  "签到配置": {
+    "type": "object",
+    "items": {
+      "重复签到文案": {
+        "type": "text",
+        "description": "今日已签到时的提示文案",
+        "default": "亲，您今天已经签到过了，请明天继续吧！"
+      },
+      "基础奖励": {
+        "type": "int",
+        "description": "每日签到基础奖励(现金)",
+        "default": 1000
+      },
+      "连签加成": {
+        "type": "int",
+        "description": "连签每日加成",
+        "default": 100
+      },
+      "金钱下限": {
+        "type": "int",
+        "description": "签到现金下限",
+        "default": 800
+      },
+      "金钱上限": {
+        "type": "int",
+        "description": "签到现金上限",
+        "default": 2000
+      },
+      "体力下限": {
+        "type": "int",
+        "description": "签到体力下限",
+        "default": 50
+      },
+      "体力上限": {
+        "type": "int",
+        "description": "签到体力上限",
+        "default": 100
+      },
+      "魅力下限": {
+        "type": "int",
+        "description": "",
+        "default": 15
+      },
+      "魅力上限": {
+        "type": "int",
+        "description": "",
+        "default": 30
+      },
+      "奖券下限": {
+        "type": "int",
+        "description": "签到奖券下限",
+        "default": 3
+      },
+      "奖券上限": {
+        "type": "int",
+        "description": "签到奖券上限",
+        "default": 8
+      },
+      "体力价格": {
+        "type": "int",
+        "description": "购买体力价格",
+        "default": 30
+      },
+      "魅力价格": {
+        "type": "int",
+        "description": "购买魅力价格",
+        "default": 3
+      }
+    }
+  },
+  "抽奖配置": {
+    "type": "object",
+    "items": {
+      "中奖率": {
+        "type": "int",
+        "description": "抽奖中奖率%",
+        "default": 70
+      },
+      "现金奖": {
+        "type": "int",
+        "description": "现金奖上限",
+        "default": 2000
+      },
+      "体力奖": {
+        "type": "int",
+        "description": "体力奖上限",
+        "default": 60
+      },
+      "魅力奖": {
+        "type": "int",
+        "description": "魅力奖上限",
+        "default": 40
+      }
+    }
+  },
+  "新手配置": {
+    "type": "object",
+    "items": {
+      "现金": {
+        "type": "int",
+        "description": "新手礼包现金",
+        "default": 10000
+      },
+      "体力": {
+        "type": "int",
+        "description": "新手礼包体力",
+        "default": 300
+      },
+      "魅力": {
+        "type": "int",
+        "description": "新手礼包魅力",
+        "default": 100
+      },
+      "奖券": {
+        "type": "int",
+        "description": "新手礼包奖券",
+        "default": 15
+      }
+    }
+  },
+  "点赞配置": {
+    "type": "object",
+    "items": {
+      "点赞数": {
+        "type": "int",
+        "description": "每日点赞数",
+        "default": 10
+      }
+    }
+  },
+  "银行配置": {
+    "type": "object",
+    "items": {
+      "打劫失败罚金": {
+        "type": "int",
+        "description": "打劫银行失败罚金",
+        "default": 200
+      },
+      "打劫成功概率": {
+        "type": "int",
+        "description": "打劫成功率%",
+        "default": 65
+      },
+      "打劫消耗体力": {
+        "type": "int",
+        "description": "打劫消耗体力",
+        "default": 5
+      },
+      "打劫魅力减少": {
+        "type": "int",
+        "description": "打劫失败魅力减少",
+        "default": 1
+      },
+      "打劫金钱下限": {
+        "type": "int",
+        "description": "打劫劫夺金币下限",
+        "default": 1000
+      },
+      "打劫金钱上限": {
+        "type": "int",
+        "description": "打劫劫夺金币上限",
+        "default": 6000
+      },
+      "打劫关押时间": {
+        "type": "int",
+        "description": "打劫关押分钟",
+        "default": 1
+      },
+      "打劫银行消耗体力": {
+        "type": "int",
+        "description": "打劫银行消耗体力",
+        "default": 10
+      },
+      "打劫银行魅力减少": {
+        "type": "int",
+        "description": "打劫银行魅力减少",
+        "default": 2
+      },
+      "打劫银行金钱下限": {
+        "type": "int",
+        "description": "打劫银行金币下限",
+        "default": 5000
+      },
+      "打劫银行金钱上限": {
+        "type": "int",
+        "description": "打劫银行金币上限",
+        "default": 15000
+      },
+      "打劫银行成功概率": {
+        "type": "int",
+        "description": "打劫银行成功率%",
+        "default": 60
+      },
+      "打劫银行关押时间": {
+        "type": "int",
+        "description": "打劫银行关押分钟",
+        "default": 1
+      },
+      "赌博成功概率": {
+        "type": "int",
+        "description": "赌博成功率%",
+        "default": 60
+      },
+      "赌博消耗体力": {
+        "type": "int",
+        "description": "赌博消耗体力",
+        "default": 5
+      },
+      "赌博魅力减少": {
+        "type": "int",
+        "description": "赌博魅力减少",
+        "default": 2
+      },
+      "赌博限定次数": {
+        "type": "int",
+        "description": "每日赌博次数上限",
+        "default": 20
+      },
+      "赌博关押时间": {
+        "type": "int",
+        "description": "赌博关押分钟",
+        "default": 1
+      },
+      "赌博最大金额": {
+        "type": "int",
+        "description": "赌博单笔最大金额",
+        "default": 100000
+      },
+      "存取款消耗体力": {
+        "type": "int",
+        "description": "存取款消耗体力",
+        "default": 1
+      },
+      "存款利率": {
+        "type": "int",
+        "description": "存款利率%",
+        "default": 3
+      },
+      "利息上限": {
+        "type": "int",
+        "description": "单次利息上限",
+        "default": 100000
+      },
+      "转账消耗体力": {
+        "type": "int",
+        "description": "转账消耗体力",
+        "default": 1
+      },
+      "转账最小金额": {
+        "type": "int",
+        "description": "转账最小金额",
+        "default": 50
+      },
+      "转账接收额度": {
+        "type": "int",
+        "description": "转账单次接收上限",
+        "default": 999999999
+      },
+      "越狱消耗体力": {
+        "type": "int",
+        "description": "越狱消耗体力",
+        "default": 3
+      },
+      "越狱魅力减少": {
+        "type": "int",
+        "description": "越狱魅力减少",
+        "default": 1
+      },
+      "越狱成功概率": {
+        "type": "int",
+        "description": "越狱成功率%",
+        "default": 80
+      },
+      "保释消耗体力": {
+        "type": "int",
+        "description": "保释消耗体力",
+        "default": 3
+      },
+      "保释魅力减少": {
+        "type": "int",
+        "description": "保释魅力减少",
+        "default": 2
+      },
+      "保释金钱下限": {
+        "type": "int",
+        "description": "保释金币下限",
+        "default": 500
+      },
+      "保释金钱上限": {
+        "type": "int",
+        "description": "保释金币上限",
+        "default": 2000
+      },
+      "红包_最小金额": {
+        "type": "int",
+        "description": "发红包最小金额",
+        "default": 100
+      },
+      "红包_发体力": {
+        "type": "int",
+        "description": "发红包消耗体力",
+        "default": 1
+      },
+      "红包_抢体力": {
+        "type": "int",
+        "description": "抢红包消耗体力",
+        "default": 1
+      },
+      "红包_抢魅力": {
+        "type": "int",
+        "description": "抢红包获得魅力",
+        "default": 1
+      },
+      "存款期限": {
+        "type": "int",
+        "description": "存款期限(天, 满期才计息)",
+        "default": 1
+      },
+      "红包_间隔时间": {
+        "type": "int",
+        "description": "发红包冷却(秒)",
+        "default": 10
+      },
+      "红包_基本魅力": {
+        "type": "int",
+        "description": "抢红包基础魅力",
+        "default": 1
+      },
+      "越狱关押时间": {
+        "type": "int",
+        "description": "越狱失败增加刑期(分钟)",
+        "default": 1
+      },
+      "红包_最大金额": {
+        "type": "int",
+        "description": "发红包最大金额",
+        "default": 100000
+      },
+      "劫狱消耗体力": {
+        "type": "int",
+        "description": "劫狱消耗体力",
+        "default": 3
+      },
+      "劫狱间隔": {
+        "type": "int",
+        "description": "劫狱间隔(分)",
+        "default": 1
+      },
+      "劫狱魅力减少": {
+        "type": "int",
+        "description": "劫狱魅力减少",
+        "default": 0
+      }
+    }
+  },
+  "娱乐配置": {
+    "type": "object",
+    "items": {
+      "抽签造价": {
+        "type": "int",
+        "description": "抽签消耗金币(0=免费)",
+        "default": 20
+      },
+      "扔炸弹_需要金钱": {
+        "type": "int",
+        "description": "扔炸弹基础花费",
+        "default": 2000
+      },
+      "扔炸弹_消耗体力": {
+        "type": "int",
+        "description": "扔炸弹消耗体力",
+        "default": 5
+      },
+      "扔炸弹_魅力减少": {
+        "type": "int",
+        "description": "扔炸弹失败扣除魅力",
+        "default": 1
+      },
+      "扔炸弹_个数下限": {
+        "type": "int",
+        "description": "炸弹数量下限",
+        "default": 1
+      },
+      "扔炸弹_个数上限": {
+        "type": "int",
+        "description": "炸弹数量上限",
+        "default": 2
+      },
+      "扔炸弹_成功概率": {
+        "type": "int",
+        "description": "扔炸弹成功率%",
+        "default": 85
+      },
+      "扔炸弹_禁言下限": {
+        "type": "int",
+        "description": "命中后禁言分钟下限",
+        "default": 1
+      },
+      "扔炸弹_禁言上限": {
+        "type": "int",
+        "description": "命中后禁言分钟上限",
+        "default": 3
+      },
+      "抽签大吉奖励": {
+        "type": "int",
+        "description": "抽签大吉奖励金币",
+        "default": 1888
+      },
+      "抽签上签奖励": {
+        "type": "int",
+        "description": "抽签上签奖励金币",
+        "default": 888
+      },
+      "抽签中签奖励": {
+        "type": "int",
+        "description": "抽签中签奖励金币",
+        "default": 288
+      },
+      "猜拳奖励金币": {
+        "type": "int",
+        "description": "猜拳胜利奖励金币",
+        "default": 600
+      },
+      "猜拳奖励魅力": {
+        "type": "int",
+        "description": "猜拳胜利奖励魅力",
+        "default": 5
+      },
+      "猜拳成功概率": {
+        "type": "int",
+        "description": "猜拳胜利概率% (50=原版)",
+        "default": 60
+      },
+      "猜拳消耗体力": {
+        "type": "int",
+        "description": "猜拳消耗体力",
+        "default": 2
+      },
+      "猜拳需要金钱": {
+        "type": "int",
+        "description": "猜拳需要金钱",
+        "default": 0
+      },
+      "猜数奖励金币": {
+        "type": "int",
+        "description": "猜数奖励金币",
+        "default": 1000
+      },
+      "猜数奖励魅力": {
+        "type": "int",
+        "description": "猜数奖励魅力",
+        "default": 6
+      },
+      "猜数消耗体力": {
+        "type": "int",
+        "description": "猜数消耗体力",
+        "default": 2
+      },
+      "猜数需要金钱": {
+        "type": "int",
+        "description": "猜数需要金钱",
+        "default": 0
+      },
+      "急转弯奖励金币": {
+        "type": "int",
+        "description": "急转弯奖励金币",
+        "default": 600
+      },
+      "急转弯奖励魅力": {
+        "type": "int",
+        "description": "急转弯奖励魅力",
+        "default": 4
+      },
+      "急转弯消耗体力": {
+        "type": "int",
+        "description": "急转弯消耗体力",
+        "default": 0
+      },
+      "猜字谜奖励金币": {
+        "type": "int",
+        "description": "猜字谜奖励金币",
+        "default": 600
+      },
+      "猜字谜奖励魅力": {
+        "type": "int",
+        "description": "猜字谜奖励魅力",
+        "default": 4
+      },
+      "猜字谜消耗体力": {
+        "type": "int",
+        "description": "猜字谜消耗体力",
+        "default": 0
+      },
+      "接龙奖励金币": {
+        "type": "int",
+        "description": "接龙成功奖励金币",
+        "default": 400
+      },
+      "接龙奖励魅力": {
+        "type": "int",
+        "description": "接龙成功奖励魅力",
+        "default": 2
+      },
+      "接龙消耗体力": {
+        "type": "int",
+        "description": "接龙消耗体力",
+        "default": 0
+      },
+      "接龙需要金钱": {
+        "type": "int",
+        "description": "接龙需要金钱",
+        "default": 0
+      },
+      "答题奖励金币": {
+        "type": "int",
+        "description": "答题奖励金币",
+        "default": 600
+      },
+      "答题奖励魅力": {
+        "type": "int",
+        "description": "答题奖励魅力",
+        "default": 4
+      },
+      "答题消耗体力": {
+        "type": "int",
+        "description": "答题消耗体力",
+        "default": 0
+      },
+      "二四点奖励金币": {
+        "type": "int",
+        "description": "二四点奖励金币",
+        "default": 1000
+      },
+      "二四点奖励魅力": {
+        "type": "int",
+        "description": "二四点奖励魅力",
+        "default": 6
+      },
+      "二四点消耗体力": {
+        "type": "int",
+        "description": "二四点消耗体力",
+        "default": 0
+      },
+      "二四点需要金钱": {
+        "type": "int",
+        "description": "二四点需要金钱",
+        "default": 0
+      },
+      "急转弯需要金钱": {
+        "type": "int",
+        "description": "急转弯需要金钱",
+        "default": 0
+      },
+      "猜字谜需要金钱": {
+        "type": "int",
+        "description": "猜字谜需要金钱",
+        "default": 0
+      },
+      "答题需要金钱": {
+        "type": "int",
+        "description": "答题需要金钱",
+        "default": 0
+      },
+      "接龙词库": {
+        "type": "text",
+        "description": "接龙自定义词库(每行/ | 分隔一个词，2-6字；支持JSON数组)",
+        "default": ""
+      },
+      "急转弯题库": {
+        "type": "text",
+        "description": "急转弯自定义题库(每行 问题|答案，支持JSON)",
+        "default": ""
+      },
+      "猜字谜题库": {
+        "type": "text",
+        "description": "猜字谜自定义题库(每行 问题|答案，支持JSON)",
+        "default": ""
+      },
+      "答题题库": {
+        "type": "text",
+        "description": "答题自定义题库(每行 问题|答案，支持JSON)",
+        "default": ""
+      }
+    }
+  },
+  "私聊配置": {
+    "type": "object",
+    "items": {
+      "私聊开关": {
+        "type": "string",
+        "description": "私聊功能开关(真/假)",
+        "default": "真"
+      },
+      "前缀开关": {
+        "type": "string",
+        "description": "回复需@/#前缀(真/假)",
+        "default": "假"
+      },
+      "回复概率": {
+        "type": "float",
+        "description": "无关键词时随机回复概率",
+        "default": 0.3
+      },
+      "黑名单关键字": {
+        "type": "string",
+        "description": "黑名单关键字(|分隔,命中即拦截)",
+        "default": ""
+      }
+    }
+  },
+  "精灵配置": {
+    "type": "object",
+    "items": {
+      "开关": {
+        "type": "string",
+        "description": "精灵系统开关(真/假)",
+        "default": "真"
+      },
+      "初始精灵": {
+        "type": "string",
+        "description": "领养赠送的初始精灵(默认第一只)",
+        "default": "叶子"
+      },
+      "升级经验": {
+        "type": "int",
+        "description": "每级所需基础经验(=等级*该值)",
+        "default": 300
+      },
+      "最大等级": {
+        "type": "int",
+        "description": "精灵最高等级",
+        "default": 100
+      },
+      "冒险间隔": {
+        "type": "int",
+        "description": "冒险间隔(分钟)",
+        "default": 2
+      },
+      "等级加成下限": {
+        "type": "int",
+        "description": "野生精灵等级加成下限",
+        "default": 3
+      },
+      "等级加成上限": {
+        "type": "int",
+        "description": "野生精灵等级加成上限",
+        "default": 8
+      },
+      "精灵数量": {
+        "type": "int",
+        "description": "持有精灵上限",
+        "default": 8
+      },
+      "魅力减少": {
+        "type": "int",
+        "description": "丢弃精灵扣除魅力",
+        "default": 10
+      },
+      "大师球": {
+        "type": "int",
+        "description": "精灵礼包赠送大师球数",
+        "default": 5
+      },
+      "奇异甜食": {
+        "type": "int",
+        "description": "精灵礼包赠送奇异甜食数",
+        "default": 10
+      },
+      "挑战奖励_金钱上限": {
+        "type": "int",
+        "description": "精灵冒险奖励金钱上限",
+        "default": 2000
+      },
+      "挑战奖励_经验下限": {
+        "type": "int",
+        "description": "精灵冒险奖励经验下限",
+        "default": 500
+      },
+      "挑战奖励_经验上限": {
+        "type": "int",
+        "description": "精灵冒险奖励经验上限",
+        "default": 1000
+      },
+      "挑战扣除_金钱下限": {
+        "type": "int",
+        "description": "精灵冒险失败扣除金钱下限",
+        "default": 50
+      },
+      "挑战扣除_金钱上限": {
+        "type": "int",
+        "description": "精灵冒险失败扣除金钱上限",
+        "default": 150
+      },
+      "初始精灵_1": {
+        "type": "string",
+        "description": "初始精灵1",
+        "default": "叶子"
+      },
+      "初始精灵_2": {
+        "type": "string",
+        "description": "初始精灵2",
+        "default": "火苗"
+      },
+      "初始精灵_3": {
+        "type": "string",
+        "description": "初始精灵3",
+        "default": "水滴"
+      },
+      "挑战奖励_金钱下限": {
+        "type": "int",
+        "description": "精灵冒险奖励金钱下限",
+        "default": 800
+      },
+      "挑战扣除_消耗体力": {
+        "type": "int",
+        "description": "精灵冒险挑战扣除体力",
+        "default": 3
+      },
+      "精灵球": {
+        "type": "int",
+        "description": "精灵礼包赠送精灵球数",
+        "default": 20
+      }
+    }
+  },
+  "坐骑配置": {
+    "type": "object",
+    "items": {
+      "开关": {
+        "type": "string",
+        "description": "坐骑系统开关(真/假)",
+        "default": "真"
+      },
+      "价格_企鹅": {
+        "type": "int",
+        "description": "坐骑-企鹅价格",
+        "default": 10000
+      },
+      "价格_伞兵": {
+        "type": "int",
+        "description": "坐骑-伞兵价格",
+        "default": 25000
+      },
+      "价格_宝驴": {
+        "type": "int",
+        "description": "坐骑-宝驴价格",
+        "default": 50000
+      },
+      "价格_保时捷": {
+        "type": "int",
+        "description": "坐骑-保时捷价格",
+        "default": 120000
+      },
+      "价格_法拉利": {
+        "type": "int",
+        "description": "坐骑-法拉利价格",
+        "default": 250000
+      },
+      "价格_玛莎拉蒂": {
+        "type": "int",
+        "description": "坐骑-玛莎拉蒂价格",
+        "default": 400000
+      },
+      "价格_劳斯莱斯": {
+        "type": "int",
+        "description": "坐骑-劳斯莱斯价格",
+        "default": 800000
+      },
+      "价格_布加迪威龙": {
+        "type": "int",
+        "description": "坐骑-布加迪威龙价格",
+        "default": 1500000
+      },
+      "价格_私人航空": {
+        "type": "int",
+        "description": "坐骑-私人航空价格",
+        "default": 4000000
+      },
+      "价格_女仆": {
+        "type": "int",
+        "description": "坐骑-女仆价格",
+        "default": 8000000
+      }
+    }
+  },
+  "超管配置": {
+    "type": "object",
+    "items": {
+      "开关": {
+        "type": "string",
+        "description": "超管系统开关(真/假)",
+        "default": "真"
+      }
+    }
+  },
+  "帮派配置": {
+    "type": "object",
+    "items": {
+      "开关": {
+        "type": "string",
+        "description": "帮派系统开关(真/假)",
+        "default": "真"
+      },
+      "创建消耗金钱": {
+        "type": "int",
+        "description": "创建帮派消耗金币",
+        "default": 20000
+      },
+      "创建消耗体力": {
+        "type": "int",
+        "description": "创建帮派消耗体力",
+        "default": 100
+      },
+      "创建需要魅力": {
+        "type": "int",
+        "description": "创建帮派所需魅力",
+        "default": 200
+      },
+      "人数上限": {
+        "type": "int",
+        "description": "帮派人数上限",
+        "default": 50
+      },
+      "帮战次数上限": {
+        "type": "int",
+        "description": "每日帮战次数上限",
+        "default": 8
+      },
+      "升级需要帮贡": {
+        "type": "int",
+        "description": "帮派升级所需帮贡",
+        "default": 20000
+      },
+      "福利基数": {
+        "type": "int",
+        "description": "帮派福利基础金额",
+        "default": 4000
+      },
+      "武器价格": {
+        "type": "int",
+        "description": "帮派购买武器单价",
+        "default": 5000
+      },
+      "购买上限": {
+        "type": "int",
+        "description": "帮派武器购买上限",
+        "default": 30
+      },
+      "修筑价格": {
+        "type": "int",
+        "description": "帮派修筑城墙单价",
+        "default": 2000
+      },
+      "修筑上限": {
+        "type": "int",
+        "description": "帮派城墙修筑上限",
+        "default": 100
+      },
+      "加入消耗体力": {
+        "type": "int",
+        "description": "加入帮派消耗体力",
+        "default": 2
+      },
+      "加入需要魅力": {
+        "type": "int",
+        "description": "加入帮派所需魅力",
+        "default": 50
+      },
+      "退出消耗体力": {
+        "type": "int",
+        "description": "退出帮派消耗体力",
+        "default": 2
+      },
+      "退出扣除魅力": {
+        "type": "int",
+        "description": "退出帮派扣除魅力",
+        "default": 20
+      },
+      "解散消耗体力": {
+        "type": "int",
+        "description": "解散帮派消耗体力",
+        "default": 50
+      },
+      "解散扣除魅力": {
+        "type": "int",
+        "description": "解散帮派扣除魅力",
+        "default": 200
+      },
+      "帮战获贡下限": {
+        "type": "int",
+        "description": "帮战获胜获得帮贡下限",
+        "default": 20
+      },
+      "帮战获贡上限": {
+        "type": "int",
+        "description": "帮战获胜获得帮贡上限",
+        "default": 50
+      },
+      "贡献下限": {
+        "type": "int",
+        "description": "单次帮派贡献最少金币(每100加1帮贡)",
+        "default": 20
+      }
+    }
+  },
+  "冒险配置": {
+    "type": "object",
+    "items": {
+      "冒险消耗体力": {
+        "type": "int",
+        "description": "冒险消耗体力",
+        "default": 5
+      },
+      "冒险需要金钱": {
+        "type": "int",
+        "description": "冒险需要金币",
+        "default": 100
+      },
+      "冒险间隔": {
+        "type": "int",
+        "description": "冒险间隔分钟",
+        "default": 3
+      },
+      "事件金钱下限": {
+        "type": "int",
+        "description": "事件奖励金币下限",
+        "default": 500
+      },
+      "事件金钱上限": {
+        "type": "int",
+        "description": "事件奖励金币上限",
+        "default": 1500
+      },
+      "结局金钱下限": {
+        "type": "int",
+        "description": "结局奖励金币下限",
+        "default": 2000
+      },
+      "结局金钱上限": {
+        "type": "int",
+        "description": "结局奖励金币上限",
+        "default": 5000
+      },
+      "最大轮数": {
+        "type": "int",
+        "description": "单次冒险最大轮数",
+        "default": 6
+      }
+    }
+  },
+  "唤醒词配置": {
+    "type": "object",
+    "items": {
+      "银行系统": {
+        "type": "string",
+        "description": "银行系统唤醒词(可多个,用|分隔)",
+        "default": "银行系统"
+      },
+      "娱乐系统": {
+        "type": "string",
+        "description": "娱乐系统唤醒词(可多个,用|分隔)",
+        "default": "娱乐系统"
+      },
+      "精灵系统": {
+        "type": "string",
+        "description": "精灵系统唤醒词(可多个,用|分隔)",
+        "default": "精灵系统"
+      },
+      "签到系统": {
+        "type": "string",
+        "description": "签到系统唤醒词(可多个,用|分隔)",
+        "default": "签到系统"
+      },
+      "坐骑系统": {
+        "type": "string",
+        "description": "坐骑系统唤醒词(可多个,用|分隔)",
+        "default": "坐骑系统"
+      },
+      "帮派系统": {
+        "type": "string",
+        "description": "帮派系统唤醒词(可多个,用|分隔)",
+        "default": "帮派系统"
+      },
+      "冒险系统": {
+        "type": "string",
+        "description": "冒险系统唤醒词(可多个,用|分隔)",
+        "default": "冒险系统"
+      },
+      "奴隶系统": {
+        "type": "string",
+        "description": "奴隶系统唤醒词(可多个,用|分隔)",
+        "default": "奴隶系统"
+      },
+      "超管系统": {
+        "type": "string",
+        "description": "超管系统唤醒词(可多个,用|分隔)",
+        "default": "超管系统"
+      }
+    }
+  },
+  "指令启用配置": {
+    "type": "object",
+    "description": "每条指令的启用开关(指令名: 真/假; 假=该指令不再响应)。由指令页维护，无需手填",
+    "items": {}
+  },
+  "指令回复配置": {
+    "type": "object",
+    "description": "各指令回复覆盖模板: 留空=默认; 多个用 | 分隔随机取一; {回复}/{默认}/默认/默认回复 代表『引擎默认回复』",
+    "items": {
+      "签到": {
+        "type": "text",
+        "description": "签到指令回复模板({回复}=默认; 可 | 多回复)",
+        "default": ""
+      },
+      "领取新手礼包": {
+        "type": "text",
+        "description": "领取新手礼包回复模板",
+        "default": ""
+      },
+      "购买体力": {
+        "type": "text",
+        "description": "购买体力回复模板(玩法数值走 签到配置.体力价格/上限999)",
+        "default": ""
+      },
+      "购买魅力": {
+        "type": "text",
+        "description": "购买魅力回复模板(玩法数值走 签到配置.魅力价格/上限999)",
+        "default": ""
+      },
+      "存款": {
+        "type": "text",
+        "description": "存款回复模板(数值走 银行配置.存款利率/利息上限/存款期限)",
+        "default": ""
+      },
+      "取款": {
+        "type": "text",
+        "description": "取款回复模板",
+        "default": ""
+      },
+      "强制取款": {
+        "type": "text",
+        "description": "强制取款回复模板",
+        "default": ""
+      },
+      "转账": {
+        "type": "text",
+        "description": "转账回复模板(数值走 银行配置.转账最小金额/转账接收额度)",
+        "default": ""
+      },
+      "发红包": {
+        "type": "text",
+        "description": "发红包回复模板(数值走 银行配置.红包_最小金额/红包_最大金额)",
+        "default": ""
+      },
+      "抢红包": {
+        "type": "text",
+        "description": "抢红包回复模板(数值走 银行配置.红包_抢体力/红包_抢魅力/红包_基本魅力)",
+        "default": ""
+      },
+      "赌博": {
+        "type": "text",
+        "description": "赌博回复模板(数值走 银行配置.赌博成功概率/赌博消耗体力/赌博魅力减少/赌博最大金额/赌博限定次数)",
+        "default": ""
+      },
+      "打劫": {
+        "type": "text",
+        "description": "打劫回复模板(数值走 银行配置.打劫成功概率/打劫消耗体力/打劫金钱上下限/打劫关押时间)",
+        "default": ""
+      },
+      "打劫银行": {
+        "type": "text",
+        "description": "打劫银行回复模板(数值走 银行配置.打劫银行成功概率/打劫银行金钱上下限)",
+        "default": ""
+      },
+      "保释": {
+        "type": "text",
+        "description": "保释/自我保释/劫狱回复模板(数值走 银行配置.保释金钱上下限/保释消耗体力)",
+        "default": ""
+      },
+      "我要越狱": {
+        "type": "text",
+        "description": "越狱回复模板(数值走 银行配置.越狱成功概率/越狱关押时间)",
+        "default": ""
+      },
+      "抽奖": {
+        "type": "text",
+        "description": "抽奖回复模板(数值走 抽奖配置)",
+        "default": ""
+      },
+      "精灵冒险": {
+        "type": "text",
+        "description": "精灵冒险回复模板(数值走 精灵配置.挑战奖励/等级加成)",
+        "default": ""
+      },
+      "丢弃精灵": {
+        "type": "text",
+        "description": "丢弃精灵回复模板(数值走 精灵配置.魅力减少)",
+        "default": ""
+      },
+      "打赏": {
+        "type": "text",
+        "description": "打赏回复模板(数值走 费用配置.打赏上限/间隔配置.打赏间隔)",
+        "default": ""
+      },
+      "保护": {
+        "type": "text",
+        "description": "保护回复模板(数值走 设置.保护费用/间隔配置.保护间隔)",
+        "default": ""
+      },
+      "我要学习": {
+        "type": "text",
+        "description": "我要学习回复模板(数值走 设置.奇遇触发概率/间隔配置.学习间隔)",
+        "default": ""
+      },
+      "讨好": {
+        "type": "text",
+        "description": "讨好回复模板(数值走 概率配置.讨好概率/间隔配置.讨好间隔)",
+        "default": ""
+      },
+      "造反": {
+        "type": "text",
+        "description": "造反回复模板(数值走 概率配置.造反概率/间隔配置.造反间隔)",
+        "default": ""
+      }
+    }
+  },
+  "自定义指令配置": {
+    "type": "object",
+    "description": "自定义指令/指令别名: 触发词 -> {command: 映射到的引擎指令/留空=纯自定义, reply: 自定义回复(可 | 多回复)}。在指令页「添加自定义指令」维护",
+    "items": {}
+  },
+  "商城图鉴": {
+    "type": "object",
+    "description": "各商城数据图鉴(精灵图鉴式): ride_shop=坐骑价格JSON, weapon_shop=武器价格/数值JSON, guild_weapon=帮派武器价/上限JSON",
+    "items": {
+      "ride_shop": {
+        "type": "text",
+        "description": "坐骑商城价格(JSON: {坐骑名:价格})",
+        "default": "{\"企鹅\": 10000, \"伞兵\": 25000, \"宝驴\": 50000, \"保时捷\": 120000, \"法拉利\": 250000, \"玛莎拉蒂\": 400000, \"劳斯莱斯\": 800000, \"布加迪威龙\": 1500000, \"私人航空\": 4000000}"
+      },
+      "weapon_shop": {
+        "type": "text",
+        "description": "武器商城价格/数值(JSON: {武器名:{price,atk,desc}})，抽奖武器自动同步至此可改价改数值",
+        "default": "{\"木剑\": 500, \"铁剑\": 1500, \"苍雪剑\": 4000, \"烈焰刀\": 10000, \"青龙偃月刀\": 30000, \"雷鸣剑\": 80000, \"鬼泪村正\": 150000, \"神使沧溟\": 400000, \"炎宿朱雀\": 800000}"
+      },
+      "guild_weapon": {
+        "type": "text",
+        "description": "帮派武器(JSON: {price,capture})",
+        "default": ""
+      }
+    }
+  },
+  "精灵图鉴": {
+    "type": "object",
+    "description": "精灵图鉴数据（spirits/maps/shop）",
+    "items": {
+      "spirits": {
+        "type": "text",
+        "description": "精灵属性JSON",
+        "default": ""
+      },
+      "maps": {
+        "type": "text",
+        "description": "地图JSON",
+        "default": ""
+      },
+      "shop": {
+        "type": "text",
+        "description": "商店JSON",
+        "default": ""
+      }
+    }
+  },
+  "备份配置": {
+    "type": "object",
+    "items": {
+      "自动备份开关": {
+        "type": "string",
+        "default": "真",
+        "description": "自动备份开关（真=每3小时自动备份，假=关闭）"
+      },
+      "备份间隔小时": {
+        "type": "int",
+        "default": 3,
+        "description": "自动备份间隔(小时)"
+      }
+    }
+  },
+  "总开关配置": {
+    "type": "object",
+    "items": {
+      "总开关": {
+        "type": "string",
+        "default": "真",
+        "description": "总开关：真=正常响应，假=完全静默（所有群聊/私聊均不响应，包括超管）"
+      }
+    }
+  },
+  "群组开关配置": {
+    "type": "object",
+    "description": "按群号开关：gid->真/假，假=该群静默（包括超管）",
+    "items": {}
+  },
+  "维护配置": {
+    "type": "object",
+    "items": {
+      "维护开关": {
+        "type": "string",
+        "default": "假",
+        "description": "维护开关（真=仅超管可用，假=正常）"
+      },
+      "维护信息": {
+        "type": "string",
+        "default": "🚧 维护中，仅超管可用，请稍后再试。",
+        "description": "维护时提示信息（仅维护开关为真时生效）"
+      }
+    }
+  }
+}

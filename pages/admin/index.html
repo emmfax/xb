@@ -1,0 +1,1836 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>小白 · 管理控制台</title>
+  <style>
+    :root {
+      /* Apple Design System (Smooth 60fps & SF Pro Typography) */
+      --bg: #F2F2F7;
+      --panel: #FFFFFF;
+      --panel-hover: #F8F8FA;
+      --panel2: #F2F2F7;
+      --panel3: #E5E5EA;
+      --text: #1D1D1F;
+      --text-secondary: #48484A;
+      --muted: #86868B;
+      --muted-soft: #C7C7CC;
+      --line: rgba(60, 60, 67, 0.12);
+      --line-subtle: rgba(60, 60, 67, 0.06);
+      
+      --acc: #0071E3;
+      --acc-hover: #0077ED;
+      --acc-active: #0058B0;
+      --accSoft: rgba(0, 113, 227, 0.08);
+      --accSoft2: rgba(0, 113, 227, 0.16);
+      --accBorder: rgba(0, 113, 227, 0.24);
+      
+      --ok: #34C759;
+      --okSoft: rgba(52, 199, 89, 0.12);
+      --warn: #FF9500;
+      --warnSoft: rgba(255, 149, 0, 0.12);
+      --bad: #FF3B30;
+      --badSoft: rgba(255, 59, 48, 0.12);
+      --purple: #5856D6;
+      --purpleSoft: rgba(88, 86, 214, 0.12);
+
+      --shadow-xs: 0 1px 2px rgba(0, 0, 0, 0.03);
+      --shadow-sm: 0 2px 8px rgba(0, 0, 0, 0.04), 0 1px 2px rgba(0, 0, 0, 0.02);
+      --shadow-md: 0 8px 24px rgba(0, 0, 0, 0.06), 0 2px 6px rgba(0, 0, 0, 0.03);
+      --shadow-lg: 0 20px 48px -8px rgba(0, 0, 0, 0.16);
+      
+      --radius-xl: 20px;
+      --radius: 16px;
+      --radius-sm: 10px;
+      --radius-xs: 6px;
+      --radius-full: 9999px;
+    }
+
+    [data-theme="dark"] {
+      --bg: #000000;
+      --panel: #1C1C1E;
+      --panel-hover: #2C2C2E;
+      --panel2: #2C2C2E;
+      --panel3: #3A3A3C;
+      --text: #F5F5F7;
+      --text-secondary: #D1D1D6;
+      --muted: #8E8E93;
+      --muted-soft: #636366;
+      --line: rgba(255, 255, 255, 0.12);
+      --line-subtle: rgba(255, 255, 255, 0.06);
+      
+      --acc: #0A84FF;
+      --acc-hover: #409CFF;
+      --acc-active: #0071E3;
+      --accSoft: rgba(10, 132, 255, 0.16);
+      --accSoft2: rgba(10, 132, 255, 0.28);
+      --accBorder: rgba(10, 132, 255, 0.35);
+      
+      --ok: #30D158;
+      --okSoft: rgba(48, 209, 88, 0.16);
+      --warn: #FF9F0A;
+      --warnSoft: rgba(255, 159, 10, 0.16);
+      --bad: #FF453A;
+      --badSoft: rgba(255, 69, 58, 0.16);
+      --purple: #5E5CE6;
+      --purpleSoft: rgba(94, 92, 230, 0.16);
+
+      --shadow-xs: 0 1px 2px rgba(0, 0, 0, 0.3);
+      --shadow-sm: 0 2px 8px rgba(0, 0, 0, 0.4);
+      --shadow-md: 0 8px 24px rgba(0, 0, 0, 0.5);
+      --shadow-lg: 0 20px 48px -8px rgba(0, 0, 0, 0.75);
+    }
+
+    * { box-sizing: border-box; }
+    
+    ::-webkit-scrollbar { width: 5px; height: 5px; }
+    ::-webkit-scrollbar-track { background: transparent; }
+    ::-webkit-scrollbar-thumb { background: var(--muted-soft); border-radius: var(--radius-full); }
+    ::-webkit-scrollbar-thumb:hover { background: var(--muted); }
+
+    body {
+      margin: 0;
+      background: var(--bg);
+      color: var(--text);
+      font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", "SF Pro Display", "PingFang SC", "Helvetica Neue", "Microsoft YaHei", sans-serif;
+      font-size: 13px;
+      line-height: 1.5;
+      letter-spacing: -0.01em;
+      -webkit-font-smoothing: antialiased;
+      -moz-osx-font-smoothing: grayscale;
+      transition: background 0.15s ease, color 0.15s ease;
+      min-height: 100vh;
+    }
+
+    .wrap {
+      max-width: 1260px;
+      margin: 0 auto;
+      padding: 14px 14px 56px;
+    }
+
+    /* Apple Header */
+    header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 12px;
+      padding: 12px 18px;
+      background: var(--panel);
+      border: 1px solid var(--line);
+      border-radius: var(--radius);
+      box-shadow: var(--shadow-sm);
+      position: sticky;
+      top: 10px;
+      z-index: 40;
+      backdrop-filter: blur(16px);
+      -webkit-backdrop-filter: blur(16px);
+    }
+    .brand {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      flex-wrap: wrap;
+    }
+    .brand h1 {
+      font-size: 16px;
+      margin: 0;
+      font-weight: 600;
+      letter-spacing: -0.02em;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      color: var(--text);
+    }
+    .brand .sub {
+      color: var(--muted);
+      font-size: 12px;
+      font-weight: 400;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+    .ver {
+      background: var(--panel2);
+      color: var(--text-secondary);
+      font-size: 11px;
+      padding: 2px 8px;
+      border-radius: var(--radius-full);
+      font-weight: 600;
+      border: 1px solid var(--line);
+    }
+    .status-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 5px;
+      font-size: 11px;
+      padding: 2px 9px;
+      border-radius: var(--radius-full);
+      background: var(--okSoft);
+      color: var(--ok);
+      font-weight: 600;
+    }
+    .status-dot {
+      width: 6px;
+      height: 6px;
+      border-radius: 50%;
+      background: var(--ok);
+    }
+    .header-ctrl {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+    .iconBtn {
+      background: var(--panel2);
+      border: 1px solid var(--line);
+      color: var(--text);
+      border-radius: var(--radius-sm);
+      width: 32px;
+      height: 32px;
+      cursor: pointer;
+      font-size: 14px;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      padding: 0;
+      transition: background 0.12s ease, transform 0.12s ease;
+    }
+    .iconBtn:hover {
+      background: var(--panel-hover);
+      border-color: var(--accBorder);
+      transform: scale(1.04);
+    }
+    .iconBtn:active { transform: scale(0.96); }
+
+    /* Apple Segmented Tabs */
+    .tabs-wrapper {
+      margin-bottom: 14px;
+      background: var(--panel);
+      padding: 4px;
+      border-radius: var(--radius);
+      border: 1px solid var(--line);
+      box-shadow: var(--shadow-sm);
+      display: flex;
+      align-items: center;
+      gap: 4px;
+      position: relative;
+    }
+    .tab-nav-btn {
+      width: 24px;
+      height: 28px;
+      background: transparent;
+      border: 0;
+      color: var(--muted);
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      padding: 0;
+      flex-shrink: 0;
+      transition: color 0.12s ease;
+      font-size: 16px;
+      line-height: 1;
+      border-radius: var(--radius-xs);
+    }
+    .tab-nav-btn:hover { color: var(--acc); background: var(--panel2); }
+    .tabs {
+      display: flex;
+      gap: 3px;
+      overflow-x: auto;
+      scrollbar-width: none;
+      scroll-behavior: smooth;
+      flex: 1;
+      padding: 2px;
+      -webkit-overflow-scrolling: touch;
+      background: rgba(118, 118, 128, 0.08);
+      border-radius: var(--radius-sm);
+    }
+    .tabs::-webkit-scrollbar { display: none; }
+    .tabs button {
+      background: transparent;
+      border: 0;
+      padding: 6px 12px;
+      font-size: 12px;
+      color: var(--muted);
+      cursor: pointer;
+      white-space: nowrap;
+      font-weight: 500;
+      border-radius: var(--radius-xs);
+      transition: background 0.12s ease, color 0.12s ease;
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+      flex-shrink: 0;
+      line-height: 1.2;
+    }
+    .tabs button:hover { color: var(--text); }
+    .tabs button.on {
+      color: var(--text);
+      background: var(--panel);
+      font-weight: 600;
+      box-shadow: 0 1px 4px rgba(0, 0, 0, 0.08);
+    }
+    [data-theme="dark"] .tabs button.on {
+      background: var(--panel3);
+      color: #FFFFFF;
+      box-shadow: 0 1px 4px rgba(0, 0, 0, 0.4);
+    }
+
+    /* 更多下拉 */
+    .more-wrap { position: relative; flex-shrink: 0; display: none; }
+    @media (max-width: 960px) { .more-wrap { display: block; } }
+    .more-btn {
+      background: var(--panel2);
+      border: 1px solid var(--line);
+      border-radius: var(--radius-xs);
+      padding: 5px 10px;
+      font-size: 12px;
+      color: var(--muted);
+      cursor: pointer;
+      white-space: nowrap;
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+    }
+    .more-btn:hover { border-color: var(--acc); color: var(--text); }
+    .more-menu {
+      position: absolute;
+      right: 0;
+      top: 115%;
+      background: var(--panel);
+      border: 1px solid var(--line);
+      border-radius: var(--radius-sm);
+      box-shadow: var(--shadow-lg);
+      padding: 6px;
+      display: none;
+      flex-direction: column;
+      gap: 3px;
+      min-width: 150px;
+      z-index: 50;
+    }
+    .more-menu.show { display: flex; }
+    .more-menu button {
+      text-align: left;
+      background: transparent;
+      border: 0;
+      padding: 7px 12px;
+      font-size: 12.5px;
+      color: var(--text);
+      border-radius: var(--radius-xs);
+      cursor: pointer;
+    }
+    .more-menu button:hover { background: var(--panel2); color: var(--acc); }
+    .more-menu button.on { background: var(--accSoft); color: var(--acc); font-weight: 600; }
+
+    .tab { display: none; }
+    .tab.on { display: block; }
+
+    /* Panels & Cards */
+    .panel {
+      background: var(--panel);
+      border: 1px solid var(--line);
+      border-radius: var(--radius);
+      padding: 18px 20px;
+      margin-bottom: 14px;
+      box-shadow: var(--shadow-sm);
+    }
+    .panel h2 {
+      font-size: 15px;
+      margin: 0 0 12px;
+      font-weight: 600;
+      letter-spacing: -0.01em;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      color: var(--text);
+    }
+    .panel h3 {
+      font-size: 13px;
+      margin: 0;
+      color: var(--text);
+      font-weight: 600;
+    }
+
+    /* Dashboard Stats Cards */
+    .cards {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(170px, 1fr));
+      gap: 12px;
+      margin-bottom: 16px;
+    }
+    @media (max-width: 640px) {
+      .cards { grid-template-columns: repeat(2, 1fr); gap: 8px; }
+      .panel { padding: 14px; border-radius: var(--radius-sm); }
+    }
+    .card {
+      background: var(--panel);
+      border: 1px solid var(--line);
+      border-radius: var(--radius-sm);
+      padding: 14px 16px;
+      box-shadow: var(--shadow-xs);
+      position: relative;
+      overflow: hidden;
+      transition: transform 0.12s ease, border-color 0.12s ease;
+    }
+    .card:hover {
+      border-color: var(--accBorder);
+      transform: translateY(-2px);
+    }
+    .card .num {
+      font-size: 22px;
+      font-weight: 700;
+      color: var(--text);
+      letter-spacing: -0.02em;
+      font-variant-numeric: tabular-nums;
+      line-height: 1.2;
+    }
+    .card .lab {
+      color: var(--muted);
+      font-size: 11.5px;
+      margin-top: 4px;
+      font-weight: 500;
+    }
+    .card .ic {
+      font-size: 20px;
+      position: absolute;
+      right: 14px;
+      top: 14px;
+      line-height: 1;
+      opacity: 0.85;
+    }
+
+    /* Buttons */
+    button, .btn {
+      background: var(--acc);
+      color: #FFFFFF;
+      border: 1px solid transparent;
+      border-radius: var(--radius-sm);
+      padding: 6px 14px;
+      font-size: 12.5px;
+      cursor: pointer;
+      font-weight: 500;
+      letter-spacing: -0.01em;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 5px;
+      transition: background 0.12s ease, transform 0.08s ease;
+      line-height: 1.35;
+      user-select: none;
+    }
+    button:hover, .btn:hover { background: var(--acc-hover); }
+    button:active, .btn:active { background: var(--acc-active); transform: scale(0.97); }
+    button.ghost, .btn.ghost {
+      background: var(--panel2);
+      border: 1px solid var(--line);
+      color: var(--text);
+    }
+    button.ghost:hover, .btn.ghost:hover {
+      background: var(--panel-hover);
+      border-color: var(--muted-soft);
+    }
+    button.sm, .btn.sm {
+      padding: 4px 10px;
+      font-size: 11.5px;
+      border-radius: var(--radius-xs);
+    }
+    button.ghost.del, .btn.ghost.del {
+      color: var(--bad);
+      border-color: rgba(255, 59, 48, 0.2);
+    }
+    button.ghost.del:hover, .btn.ghost.del:hover {
+      background: var(--bad);
+      color: #FFFFFF;
+      border-color: var(--bad);
+    }
+
+    /* Search & Form Inputs (Apple Vision / HIG Styling) */
+    input[type=text],
+    input[type=number],
+    input[type=password],
+    input[type=search],
+    input[type=email],
+    select,
+    textarea {
+      background: var(--panel2);
+      border: 1px solid var(--line);
+      color: var(--text);
+      border-radius: 10px;
+      padding: 8px 12px;
+      font-size: 13px;
+      font-family: inherit;
+      outline: none;
+      transition: all 0.16s cubic-bezier(0.16, 1, 0.3, 1);
+      box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.02);
+      -webkit-appearance: none;
+      appearance: none;
+      box-sizing: border-box;
+    }
+
+    input[type=text]:hover,
+    input[type=number]:hover,
+    input[type=password]:hover,
+    input[type=search]:hover,
+    select:hover,
+    textarea:hover {
+      border-color: var(--muted-soft);
+      background: var(--panel);
+    }
+
+    input[type=text]:focus,
+    input[type=number]:focus,
+    input[type=password]:focus,
+    input[type=search]:focus,
+    select:focus,
+    textarea:focus {
+      border-color: var(--acc);
+      background: var(--panel);
+      box-shadow: 0 0 0 3.5px var(--accSoft2), inset 0 1px 2px rgba(0, 0, 0, 0.02);
+    }
+
+    input::placeholder,
+    textarea::placeholder {
+      color: var(--muted);
+      opacity: 0.65;
+      font-size: 12px;
+    }
+
+    /* Custom Apple Select with subtle Chevron */
+    select {
+      padding-right: 32px !important;
+      background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%238e8e93' stroke-width='2.2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M6 9l6 6 6-6'/%3E%3C/svg%3E");
+      background-repeat: no-repeat;
+      background-position: right 10px center;
+      background-size: 12px;
+      cursor: pointer;
+    }
+
+    /* Textarea Typography & Line-height */
+    textarea {
+      border-radius: 12px;
+      line-height: 1.55;
+      resize: vertical;
+      padding: 10px 12px;
+    }
+
+    /* Number Input Clean-up */
+    input[type=number]::-webkit-inner-spin-button,
+    input[type=number]::-webkit-outer-spin-button {
+      opacity: 0.35;
+      cursor: pointer;
+    }
+    input[type=number]:hover::-webkit-inner-spin-button {
+      opacity: 0.8;
+    }
+
+    /* Search Bar with Apple Vision Spotlight effect */
+    .search {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      background: var(--panel2);
+      border: 1px solid var(--line);
+      border-radius: 12px;
+      padding: 9px 14px;
+      margin-bottom: 12px;
+      transition: all 0.18s cubic-bezier(0.16, 1, 0.3, 1);
+      box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.02);
+      position: relative;
+    }
+    .search:hover {
+      background: var(--panel);
+      border-color: var(--muted-soft);
+      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
+    }
+    .search:focus-within {
+      border-color: var(--acc);
+      box-shadow: 0 0 0 3.5px var(--accSoft2), 0 2px 10px rgba(0, 113, 227, 0.08);
+      background: var(--panel);
+    }
+    .search span, .search .search-icon {
+      font-size: 14px;
+      line-height: 1;
+      opacity: 0.75;
+      user-select: none;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+    }
+    .search input {
+      border: 0 !important;
+      background: transparent !important;
+      outline: none !important;
+      color: var(--text) !important;
+      font-size: 13px !important;
+      font-weight: 400;
+      width: 100% !important;
+      font-family: inherit;
+      padding: 0 !important;
+      box-shadow: none !important;
+      border-radius: 0 !important;
+      line-height: 1.4;
+    }
+    .search input::placeholder {
+      color: var(--muted);
+      opacity: 0.65;
+      font-size: 12.5px;
+    }
+
+    /* Table Editable Input Cells */
+    table input[type=text],
+    table input[type=number] {
+      background: rgba(118, 118, 128, 0.06);
+      border: 1px solid transparent;
+      border-radius: 8px;
+      padding: 5px 8px;
+      font-size: 12px;
+      transition: all 0.12s ease;
+    }
+    table input[type=text]:hover,
+    table input[type=number]:hover {
+      background: var(--panel2);
+      border-color: var(--line);
+    }
+    table input[type=text]:focus,
+    table input[type=number]:focus {
+      background: var(--panel);
+      border-color: var(--acc);
+      box-shadow: 0 0 0 2.5px var(--accSoft2);
+    }
+
+    /* Tables */
+    .table-wrap {
+      overflow-x: auto;
+      border: 1px solid var(--line);
+      border-radius: var(--radius-sm);
+      margin-top: 10px;
+      background: var(--panel);
+      -webkit-overflow-scrolling: touch;
+    }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 12px;
+      text-align: left;
+    }
+    th {
+      background: var(--panel2);
+      padding: 9px 11px;
+      color: var(--muted);
+      font-weight: 600;
+      border-bottom: 1px solid var(--line);
+      white-space: nowrap;
+      user-select: none;
+    }
+    td {
+      padding: 8px 11px;
+      border-bottom: 1px solid var(--line-subtle);
+      color: var(--text);
+      vertical-align: middle;
+    }
+    tr:last-child td { border-bottom: 0; }
+    tbody tr:hover { background: var(--panel-hover); }
+
+    /* Badges */
+    .badge {
+      display: inline-flex;
+      align-items: center;
+      padding: 2px 7px;
+      border-radius: var(--radius-full);
+      font-size: 11px;
+      font-weight: 600;
+      line-height: 1.3;
+    }
+    .badge-primary { background: var(--accSoft); color: var(--acc); }
+    .badge-success { background: var(--okSoft); color: var(--ok); }
+    .badge-warn { background: var(--warnSoft); color: var(--warn); }
+    .badge-bad, .badge-danger { background: var(--badSoft); color: var(--bad); }
+    .badge-purple { background: var(--purpleSoft); color: var(--purple); }
+
+    /* iOS Switches */
+    .switch {
+      position: relative;
+      display: inline-block;
+      width: 40px;
+      height: 22px;
+      flex-shrink: 0;
+    }
+    .switch input { opacity: 0; width: 0; height: 0; }
+    .slider-toggle {
+      position: absolute;
+      cursor: pointer;
+      inset: 0;
+      background: #E5E5EA;
+      border-radius: 34px;
+      transition: background 0.2s ease;
+    }
+    [data-theme="dark"] .slider-toggle { background: #39393D; }
+    .slider-toggle:before {
+      position: absolute;
+      content: "";
+      height: 18px;
+      width: 18px;
+      left: 2px;
+      bottom: 2px;
+      background: #FFFFFF;
+      border-radius: 50%;
+      box-shadow: 0 1px 3px rgba(0, 0, 0, 0.2);
+      transition: transform 0.2s ease;
+    }
+    input:checked + .slider-toggle { background: var(--ok); }
+    input:checked + .slider-toggle:before { transform: translateX(18px); }
+
+    /* Configuration List View */
+    .cfg-sec {
+      background: var(--panel2);
+      border: 1px solid var(--line);
+      border-radius: var(--radius-sm);
+      padding: 14px 16px;
+      margin-bottom: 12px;
+    }
+    .cfg-row {
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+      margin-bottom: 12px;
+    }
+    .cfg-row:last-child { margin-bottom: 0; }
+    .cfg-row > label {
+      font-size: 12.5px;
+      font-weight: 600;
+      color: var(--text);
+    }
+    .cfg-row small {
+      color: var(--muted);
+      font-size: 11px;
+    }
+    .cfg-row.has-checkbox {
+      flex-direction: row;
+      align-items: center;
+      justify-content: space-between;
+      flex-wrap: wrap;
+    }
+    .cfg-row.has-checkbox small {
+      width: 100%;
+      margin-top: 2px;
+    }
+
+    /* Cat pills */
+    .cfg-cat {
+      display: flex;
+      gap: 6px;
+      overflow-x: auto;
+      padding-bottom: 6px;
+      margin-bottom: 12px;
+      scrollbar-width: none;
+    }
+    .cfg-cat::-webkit-scrollbar { display: none; }
+    .cfg-cat button {
+      background: var(--panel2);
+      border: 1px solid var(--line);
+      color: var(--muted);
+      border-radius: var(--radius-full);
+      padding: 4px 12px;
+      font-size: 11.5px;
+      font-weight: 500;
+    }
+    .cfg-cat button.on {
+      background: var(--acc);
+      color: #FFFFFF;
+      border-color: var(--acc);
+      font-weight: 600;
+    }
+
+    /* Overview Required Quick Config */
+    .ov-req {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+      gap: 12px;
+    }
+    .ov-field {
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+    }
+    .ov-field label {
+      font-size: 12px;
+      font-weight: 600;
+      color: var(--text-secondary);
+    }
+    .ov-field small {
+      font-size: 11px;
+      color: var(--muted);
+    }
+
+    /* Command Details & Tree */
+    .cmd-block {
+      border: 1px solid var(--line);
+      border-radius: var(--radius-sm);
+      margin-bottom: 8px;
+      overflow: hidden;
+      background: var(--panel2);
+    }
+    .cmd-block > summary {
+      padding: 10px 14px;
+      cursor: pointer;
+      font-weight: 600;
+      font-size: 13px;
+      user-select: none;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+    .cmd-block > summary:hover { background: var(--panel-hover); }
+    .cmd-block[open] > summary {
+      border-bottom: 1px solid var(--line);
+      background: var(--panel);
+    }
+    .cmd-tag {
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+      background: var(--panel);
+      border: 1px solid var(--line);
+      border-radius: var(--radius-xs);
+      padding: 4px 9px;
+      margin: 3px 4px 3px 0;
+      font-size: 12px;
+      text-decoration: none;
+      color: var(--text);
+      cursor: pointer;
+      transition: border-color 0.12s ease, color 0.12s ease;
+      box-shadow: var(--shadow-xs);
+    }
+    .cmd-tag:hover {
+      border-color: var(--acc);
+      color: var(--acc);
+      background: var(--accSoft);
+    }
+    .cmd-tag.off {
+      opacity: .45;
+      text-decoration: line-through;
+      background: var(--panel2);
+    }
+    .cmd-tag.custom {
+      border-style: dashed;
+      color: var(--acc);
+      border-color: var(--acc);
+    }
+    .cmd-wake {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      margin: 8px 14px 6px;
+      padding: 8px 12px;
+      background: var(--panel);
+      border: 1px solid var(--line);
+      border-radius: var(--radius-sm);
+      flex-wrap: wrap;
+    }
+    .cmd-wake-item {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+    .cmd-wake-item label {
+      color: var(--text-secondary);
+      font-size: 12px;
+      font-weight: 600;
+    }
+    .cmd-wake-item input[type=text], .cmd-wake input {
+      flex: 1;
+      min-width: 150px;
+    }
+    .cmd-tags {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 5px;
+      padding: 8px 14px 12px;
+    }
+    .cmd-dflt {
+      color: var(--muted);
+      font-size: 11px;
+      margin-top: 4px;
+      padding: 5px 10px;
+      background: var(--panel2);
+      border-radius: var(--radius-xs);
+      border: 1px dashed var(--line);
+      line-height: 1.4;
+    }
+
+    
+    /* Apple Vision Group Cards & Callouts */
+    .apple-card {
+      background: var(--panel2);
+      border: 1px solid var(--line);
+      border-radius: 14px;
+      padding: 12px 14px;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+    .apple-card-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 10px;
+    }
+    .apple-card-divider {
+      height: 1px;
+      background: var(--line);
+      margin: 2px 0;
+    }
+    .apple-card-field {
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+    }
+    .apple-card-field > label {
+      font-size: 12px;
+      color: var(--text-secondary);
+      font-weight: 600;
+    }
+    .apple-card-field input, .apple-card-field textarea {
+      width: 100%;
+      background: var(--panel);
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      padding: 7px 10px;
+      font-size: 12.5px;
+      color: var(--text);
+    }
+    .apple-card-field input:focus, .apple-card-field textarea:focus {
+      border-color: var(--acc);
+      box-shadow: 0 0 0 3px var(--acc-soft);
+    }
+    .cmd-reply-preview {
+      margin-top: 4px;
+      padding: 10px 12px;
+      background: var(--panel);
+      border-left: 3px solid var(--acc);
+      border-radius: 8px;
+      font-size: 12px;
+      line-height: 1.5;
+    }
+    .cmd-reply-preview-label {
+      font-weight: 600;
+      font-size: 11.5px;
+      color: var(--acc);
+      margin-bottom: 3px;
+    }
+    .cmd-reply-preview-content {
+      color: var(--text-secondary);
+      white-space: pre-wrap;
+      word-break: break-all;
+    }
+    .var-tag {
+      cursor: pointer;
+      background: var(--panel);
+      border: 1px solid var(--line);
+      padding: 3px 8px;
+      border-radius: 6px;
+      font-size: 11px;
+      color: var(--acc);
+      transition: all 0.15s ease;
+      user-select: none;
+    }
+    .var-tag:hover {
+      background: var(--acc);
+      color: #fff;
+      border-color: var(--acc);
+    }
+
+    /* Apple Modal Dialogs - 质感浮层适配 */
+    #cmdModal, #appModal {
+      position: fixed;
+      inset: 0;
+      background: rgba(0, 0, 0, 0.4);
+      display: none;
+      align-items: center;
+      justify-content: center;
+      z-index: 80;
+      padding: 16px;
+      backdrop-filter: blur(16px);
+      -webkit-backdrop-filter: blur(16px);
+    }
+    #cmdModal.show, #appModal.show { display: flex; }
+    .cmd-modal-box {
+      background: var(--panel);
+      border: 1px solid var(--line);
+      border-radius: var(--radius);
+      padding: 0;
+      width: min(560px, 94vw);
+      max-height: 85vh;
+      display: flex;
+      flex-direction: column;
+      box-shadow: var(--shadow-lg);
+      overflow: hidden;
+    }
+    .cmd-modal-header {
+      padding: 16px 20px 12px;
+      border-bottom: 1px solid var(--line);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+    .cmd-modal-header h3 { margin: 0; font-size: 15px; font-weight: 600; }
+    .cmd-modal-body {
+      padding: 16px 20px;
+      overflow-y: auto;
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+    }
+    .cmd-modal-footer {
+      padding: 12px 20px;
+      border-top: 1px solid var(--line);
+      background: var(--panel2);
+      display: flex;
+      align-items: center;
+      justify-content: flex-end;
+      gap: 8px;
+    }
+    .cmd-modal-sys {
+      color: var(--muted);
+      font-size: 12px;
+    }
+    .cmd-modal-field { display: flex; flex-direction: column; gap: 4px; }
+    .cmd-modal-field > label {
+      font-size: 12px;
+      color: var(--text-secondary);
+      font-weight: 600;
+    }
+    .cmd-modal-field input, .cmd-modal-field textarea { width: 100%; }
+    .cmd-nums {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+      gap: 6px;
+      margin-top: 4px;
+    }
+    .cmd-nums label.cnum {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 6px;
+      font-size: 11.5px;
+      color: var(--text-secondary);
+      background: var(--panel2);
+      border: 1px solid var(--line);
+      border-radius: var(--radius-xs);
+      padding: 5px 8px;
+    }
+    .cmd-nums label.cnum span {
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+      font-weight: 500;
+    }
+    .cmd-nums input {
+      width: 75px;
+      padding: 3px 6px;
+      font-size: 11.5px;
+      text-align: right;
+    }
+
+    .hint {
+      color: var(--muted);
+      font-size: 12px;
+      margin: 5px 0;
+      line-height: 1.4;
+    }
+    .msg {
+      margin-left: 8px;
+      font-size: 12.5px;
+      font-weight: 600;
+    }
+    .ok { color: var(--ok); }
+    .bad { color: var(--bad); }
+    #footErr {
+      color: var(--bad);
+      margin-top: 14px;
+      font-size: 12.5px;
+      font-weight: 500;
+    }
+
+    /* Apple Toast */
+    #toast {
+      position: fixed;
+      left: 50%;
+      bottom: 24px;
+      transform: translateX(-50%) translateY(16px);
+      background: rgba(29, 29, 31, 0.92);
+      color: #FFFFFF;
+      padding: 8px 18px;
+      border-radius: var(--radius-full);
+      font-size: 12.5px;
+      font-weight: 500;
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity 0.15s ease, transform 0.15s ease;
+      box-shadow: var(--shadow-lg);
+      z-index: 100;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+    [data-theme="dark"] #toast {
+      background: rgba(44, 44, 46, 0.95);
+      border: 1px solid rgba(255, 255, 255, 0.15);
+    }
+    #toast.show {
+      opacity: 1;
+      transform: translateX(-50%) translateY(0);
+    }
+    #toast.okk { background: rgba(52, 199, 89, 0.95); }
+    #toast.badk { background: rgba(255, 59, 48, 0.95); }
+
+    .toolbar {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      margin-bottom: 12px;
+      flex-wrap: wrap;
+    }
+    .toolbar h2 { margin: 0; flex: 0 0 auto; }
+
+    /* Gallery & Files */
+    .grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(130px, 1fr));
+      gap: 10px;
+    }
+    @media (max-width: 640px) {
+      .grid { grid-template-columns: repeat(2, 1fr); gap: 8px; }
+      .toolbar { gap: 6px; }
+    }
+    
+    .fcard {
+      background: var(--panel2);
+      border: 1px solid var(--line);
+      border-radius: var(--radius-sm);
+      padding: 12px 10px;
+      text-align: center;
+      cursor: pointer;
+      transition: border-color 0.12s ease;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      min-height: 100px;
+    }
+    .fcard:hover {
+      border-color: var(--acc);
+      color: var(--acc);
+      background: var(--accSoft);
+    }
+    .fcard .fi { font-size: 28px; line-height: 1; margin-bottom: 4px; }
+    .fcard .fn {
+      font-size: 11.5px;
+      margin-top: 2px;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+      max-width: 100%;
+      font-weight: 500;
+    }
+    .fcard.selected, .icard.selected {
+      border-color: var(--acc) !important;
+      box-shadow: 0 0 0 2px var(--acc) !important;
+      background: var(--accSoft) !important;
+    }
+
+    .icard {
+      border: 1px solid var(--line);
+      border-radius: var(--radius-sm);
+      overflow: hidden;
+      cursor: pointer;
+      background: var(--panel2);
+      transition: border-color 0.12s ease;
+    }
+    .icard:hover { border-color: var(--acc); }
+    .icard img {
+      width: 100%;
+      height: 105px;
+      object-fit: cover;
+      display: block;
+      background: var(--panel);
+    }
+    .icard .nm {
+      font-size: 11.5px;
+      padding: 5px 8px;
+      color: var(--text-secondary);
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+      font-weight: 500;
+    }
+
+    /* Backups List */
+    .bk-list { display: flex; flex-direction: column; gap: 6px; }
+    .bk-item {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      background: var(--panel2);
+      border: 1px solid var(--line);
+      border-radius: var(--radius-sm);
+      padding: 10px 14px;
+      cursor: pointer;
+      transition: border-color 0.12s ease;
+    }
+    .bk-item:hover {
+      border-color: var(--acc);
+      background: var(--accSoft);
+    }
+    .bk-item.selected {
+      border-color: var(--acc) !important;
+      background: var(--accSoft) !important;
+      box-shadow: 0 0 0 2px var(--acc) !important;
+    }
+    .bk-icon { font-size: 20px; flex: 0 0 auto; }
+    .bk-info { flex: 1; min-width: 0; }
+    .bk-name {
+      font-weight: 600;
+      font-size: 13px;
+      color: var(--text);
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+    .bk-meta { color: var(--muted); font-size: 11.5px; margin-top: 2px; display: flex; gap: 12px; }
+
+    /* Spirits Map Cards */
+    .s-mapcard {
+      border: 1px solid var(--line);
+      border-radius: var(--radius-sm);
+      background: var(--panel2);
+      margin-bottom: 10px;
+      overflow: hidden;
+    }
+    .s-maphead {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 10px 14px;
+      cursor: pointer;
+      user-select: none;
+    }
+    .s-maphead:hover { background: var(--panel-hover); }
+    .s-mapname { font-weight: 600; font-size: 13.5px; }
+    .s-maplv {
+      color: var(--acc);
+      font-size: 11px;
+      background: var(--accSoft);
+      padding: 2px 8px;
+      border-radius: var(--radius-full);
+      font-weight: 600;
+      border: 1px solid var(--accBorder);
+    }
+    .s-mapdrop {
+      color: var(--muted);
+      font-size: 12px;
+      flex: 1;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+    .s-arr { color: var(--muted); font-size: 12px; }
+    .s-mapbody { display: none; padding: 12px 14px; border-top: 1px solid var(--line); background: var(--panel); }
+    .s-mapcard.open .s-mapbody { display: block; }
+    .sp-spirits { display: flex; flex-direction: column; gap: 8px; margin-bottom: 8px; }
+    .sp-card {
+      border: 1px solid var(--line);
+      border-radius: var(--radius-xs);
+      background: var(--panel2);
+      padding: 8px 10px;
+    }
+    .sp-card .sp-name { font-weight: 600; font-size: 13px; margin-bottom: 6px; }
+    .s-fields {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      align-items: center;
+      background: var(--panel2);
+      border: 1px solid var(--line);
+      border-radius: var(--radius-xs);
+      padding: 10px 12px;
+    }
+    .s-row { display: flex; flex-direction: column; gap: 3px; flex: 0 1 90px; }
+    .s-row small { color: var(--muted); font-size: 11px; font-weight: 500; }
+    .s-row input { width: 100%; padding: 4px 7px; font-size: 12px; }
+    .s-del {
+      background: var(--bad);
+      color: #FFFFFF;
+      border: 0;
+      border-radius: var(--radius-xs);
+      padding: 5px 10px;
+      font-size: 11.5px;
+      cursor: pointer;
+      margin-left: auto;
+    }
+    .s-del:hover { background: #E0261C; }
+
+    .crumbs a { color: var(--acc); cursor: pointer; margin-right: 4px; text-decoration: none; font-weight: 500; }
+    .crumbs a:hover { text-decoration: underline; }
+    
+    #lightbox {
+      position: fixed;
+      inset: 0;
+      background: rgba(0, 0, 0, 0.85);
+      display: none;
+      align-items: center;
+      justify-content: center;
+      z-index: 90;
+      cursor: zoom-out;
+      backdrop-filter: blur(16px);
+      -webkit-backdrop-filter: blur(16px);
+    }
+    #lightbox img { max-width: 90vw; max-height: 86vh; border-radius: 12px; box-shadow: 0 20px 50px rgba(0,0,0,0.6); }
+    #lightbox.show { display: flex; }
+    #lightbox .cap { position: absolute; bottom: 20px; left: 0; right: 0; text-align: center; color: #FFFFFF; font-size: 13px; font-weight: 500; }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <header>
+      <div class="brand">
+        <h1>小白 · 管理控制台 <span class="ver">v0.66</span> <span id="verBadge" style="display:none;font-size:11px;padding:3px 8px;border-radius:12px;background:linear-gradient(135deg, #10B981, #059669);color:#fff;font-weight:600;cursor:pointer;margin-left:4px;box-shadow:0 2px 6px rgba(16,185,129,0.3)" title="点击查看更新并一键升级">🚀 发现新版本</span></h1>
+        <div class="sub">
+          <span>astrbot_plugin_xbbot</span>
+          <span class="status-badge"><span class="status-dot"></span> 运行正常</span>
+        </div>
+      </div>
+      <div class="header-ctrl">
+        <button class="iconBtn" id="themeBtn" title="切换深浅主题">☀</button>
+      </div>
+    </header>
+
+    <div class="tabs-wrapper">
+      <button class="tab-nav-btn" id="tabNavPrev" title="向前滚动">‹</button>
+      <div class="tabs" id="mainTabs">
+        <button data-tab="overview" class="on">📊 概览大屏</button>
+        <button data-tab="rank">🏆 排行榜</button>
+        <button data-tab="users">👤 用户管理</button>
+        <button data-tab="slave">⛓ 奴隶用户</button>
+        <button data-tab="spirit_users">🐾 精灵用户</button>
+        <button data-tab="groups">👥 群聊开关</button>
+        <button data-tab="config">⚙️ 必要配置</button>
+        <button data-tab="cmds">🎮 指令与玩法</button>
+        <button data-tab="shops">🎨 图鉴工坊</button>
+        <button data-tab="spirits">📖 精灵图鉴</button>
+        <button data-tab="backups">💾 备份管理</button>
+        <button data-tab="imgs">📁 根目录浏览</button>
+      </div>
+      <button class="tab-nav-btn" id="tabNavNext" title="向后滚动">›</button>
+      </div>
+    </div>
+
+    <!-- 总览 -->
+    <!-- 📊 群生态与宏观经济运行大屏 -->
+    <div class="tab on" id="tab-overview">
+      <div class="panel" style="margin-bottom:12px">
+        <div class="toolbar" style="margin-bottom:8px">
+          <h2>📊 群生态与宏观经济运行大屏</h2>
+          <div style="display:flex;gap:6px;margin-left:auto;flex-wrap:wrap">
+            <button id="btnDbDoctorOv" class="ghost" style="color:var(--succ);border-color:var(--succSoft);font-weight:600">🩺 数据库体检与整理</button>
+            <button id="btnCheckUpdate" class="ghost" style="color:var(--acc);border-color:var(--accSoft2);font-weight:600">🚀 检查更新</button>
+            <button id="btnRefreshAnalytics" class="ghost">🔄 刷新大屏数据</button>
+          </div>
+        </div>
+
+        <!-- 统一 6 大核心宏观生态指标卡片 (纯净无冗余) -->
+        <div class="kpi-grid" id="analyticsKpiGrid" style="display:grid;grid-template-columns:repeat(auto-fit, minmax(180px, 1fr));gap:10px;margin:8px 0 14px">
+          <div class="card" style="padding:12px 14px;background:var(--panel2);border-radius:12px;border:1px solid var(--line)">
+            <div style="font-size:11.5px;color:var(--muted)">👥 玩家与群聊规模</div>
+            <div id="anaTotalUsers" style="font-size:20px;font-weight:700;color:var(--text);margin-top:3px">-</div>
+            <div id="anaTotalGroups" style="font-size:11px;color:var(--acc);margin-top:2px">开通群聊: -</div>
+          </div>
+          <div class="card" style="padding:12px 14px;background:var(--panel2);border-radius:12px;border:1px solid var(--line)">
+            <div style="font-size:11.5px;color:var(--muted)">💰 全服流通金币池</div>
+            <div id="anaTotalEconomy" style="font-size:20px;font-weight:700;color:var(--text);margin-top:3px">-</div>
+            <div id="anaAvgMoney" style="font-size:11px;color:var(--acc);margin-top:2px">人均: -</div>
+          </div>
+          <div class="card" style="padding:12px 14px;background:var(--panel2);border-radius:12px;border:1px solid var(--line)">
+            <div style="font-size:11.5px;color:var(--muted)">🏦 银行总储蓄池</div>
+            <div id="anaBankDeposit" style="font-size:20px;font-weight:700;color:var(--succ);margin-top:3px">-</div>
+            <div id="anaBankUsers" style="font-size:11px;color:var(--muted);margin-top:2px">储蓄玩家: -</div>
+          </div>
+          <div class="card" style="padding:12px 14px;background:var(--panel2);border-radius:12px;border:1px solid var(--line)">
+            <div style="font-size:11.5px;color:var(--muted)">⛓️ 奴隶生态与总身价</div>
+            <div id="anaSlaveWorth" style="font-size:20px;font-weight:700;color:#F59E0B;margin-top:3px">-</div>
+            <div id="anaSlaveCount" style="font-size:11px;color:var(--muted);margin-top:2px">奴隶/奴隶主: -</div>
+          </div>
+          <div class="card" style="padding:12px 14px;background:var(--panel2);border-radius:12px;border:1px solid var(--line)">
+            <div style="font-size:11.5px;color:var(--muted)">📅 累计签到人次</div>
+            <div id="anaSignCount" style="font-size:20px;font-weight:700;color:var(--text);margin-top:3px">-</div>
+            <div id="anaSignRate" style="font-size:11px;color:var(--succ);margin-top:2px">活跃度: 稳健</div>
+          </div>
+        </div>
+
+        <!-- 图表布局：阶层金字塔 + 24小时活跃折线图 -->
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-top:8px" id="analyticsChartsWrap">
+          <!-- 财富阶层分布图 -->
+          <div style="background:var(--panel2);border-radius:12px;border:1px solid var(--line);padding:14px">
+            <div style="font-weight:600;font-size:12.5px;color:var(--text);margin-bottom:10px">📊 财富阶层与贫富分布金字塔</div>
+            <div id="chartTierContainer" style="height:170px;display:flex;align-items:center;justify-content:center"></div>
+          </div>
+          <!-- 24小时活跃时段分布图 -->
+          <div style="background:var(--panel2);border-radius:12px;border:1px solid var(--line);padding:14px">
+            <div style="font-weight:600;font-size:12.5px;color:var(--text);margin-bottom:10px">📈 24小时群活跃与签到波峰走势</div>
+            <div id="chartActivityContainer" style="height:170px;display:flex;align-items:center;justify-content:center"></div>
+          </div>
+        </div>
+      </div>
+
+            <div class="panel">
+        <h2>⚡ 必要核心配置（快捷编辑）</h2>
+        <div id="ovReq" class="ov-req"></div>
+      </div>
+      <div class="panel">
+        <h2>💡 快速指引</h2>
+        <div class="hint">· <strong>概览大屏</strong>：实时呈现全群资金规模、银行存款、奴隶总身价与24小时活跃走势。</div>
+        <div class="hint">· <strong>智能平衡</strong>：内置休闲高福利/标准/硬核三大模式，一键统筹全28大系统玩法与冷却时间。</div>
+        <div class="hint">· <strong>图鉴工坊</strong>：拖拽调节装备属性与稀有度，所见即所得设计装备坐骑并一键入库。</div>
+      </div>
+    </div>
+
+    <!-- 用户 -->
+    <div class="tab" id="tab-users">
+      <div class="panel">
+        <div class="toolbar">
+          <h2>用户 · 数据编辑</h2>
+          <div style="display:flex;align-items:center;gap:5px;flex-wrap:wrap">
+            <label style="color:var(--muted);font-size:12px;font-weight:500">群号：</label>
+            <select id="userGidFilter" style="padding:3px 6px;font-size:11.5px;min-width:120px;max-width:170px">
+              <option value="">全部群</option>
+            </select>
+            <label style="color:var(--muted);font-size:12px;font-weight:500;margin-left:4px">排序：</label>
+            <select id="userSort" style="padding:3px 6px;font-size:11.5px;min-width:100px">
+              <option value="money_desc">金币 ↓ (从多到少)</option>
+              <option value="money_asc">金币 ↑ (从少到多)</option>
+              <option value="deposit_desc">存款 ↓ (从多到少)</option>
+              <option value="deposit_asc">存款 ↑ (从少到多)</option>
+              <option value="stamina_desc">体力 ↓ (从多到少)</option>
+              <option value="stamina_asc">体力 ↑ (从少到多)</option>
+              <option value="charm_desc">魅力 ↓ (从多到少)</option>
+              <option value="charm_asc">魅力 ↑ (从少到多)</option>
+              <option value="sign_desc">签到次数 ↓</option>
+              <option value="sign_asc">签到次数 ↑</option>
+              <option value="qq_asc">QQ 顺序 (正序)</option>
+              <option value="qq_desc">QQ 倒序</option>
+            </select>
+          </div>
+          <div style="display:flex;gap:5px;margin-left:auto;flex-wrap:wrap">
+            <button id="btnUsers" class="ghost">🔄 刷新</button>
+            <button id="btnUsersExport" class="ghost">📥 导出</button>
+            <button id="btnUsersImport" class="ghost">📤 导入</button>
+            <button id="btnUsersAirdrop" class="ghost" style="color:var(--acc);border-color:var(--accSoft2)">🎁 批量空投福利</button>
+            <button id="btnUsersCleanLeft" class="ghost del">🧹 清理退群人员</button>
+          </div>
+        </div>
+        <div class="search"><span>🔍</span><input id="userSearch" placeholder="搜索 QQ / 昵称 / 群号…" /></div>
+        <div class="hint" id="userHint">直接改动数值后点右侧「保存」生效；点击表头可快捷切换升降序。</div>
+        <div class="table-wrap">
+          <table>
+            <thead><tr>
+              <th data-sort="qq" style="cursor:pointer;min-width:105px" title="点击按 QQ 排序">QQ ⇕</th>
+              <th style="min-width:90px">昵称</th>
+              <th data-sort="gid" style="cursor:pointer;min-width:95px" title="点击按群号排序">群号 ⇕</th>
+              <th data-sort="money" style="min-width:145px;cursor:pointer" title="点击按金币排序">金币 ⇕</th>
+              <th data-sort="stamina" style="cursor:pointer;min-width:70px" title="点击按体力排序">体力 ⇕</th>
+              <th data-sort="charm" style="cursor:pointer;min-width:70px" title="点击按魅力排序">魅力 ⇕</th>
+              <th style="min-width:70px">奖券</th>
+              <th data-sort="deposit" style="min-width:155px;cursor:pointer" title="点击按存款排序">存款 ⇕</th>
+              <th data-sort="sign" style="cursor:pointer;min-width:75px" title="点击按签到排序">签到 ⇕</th>
+              <th style="min-width:125px">操作</th>
+            </tr></thead>
+            <tbody id="userBody"></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <!-- 奴隶 -->
+    <div class="tab" id="tab-slave">
+      <div class="panel">
+        <div class="toolbar">
+          <h2>奴隶用户</h2>
+          <div style="display:flex;align-items:center;gap:5px;flex-wrap:wrap">
+            
+            <label style="color:var(--muted);font-size:12px;font-weight:500;margin-left:4px">排序：</label>
+            <select id="slaveSort" style="padding:3px 6px;font-size:11.5px;min-width:100px">
+              <option value="price_desc">身价 ↓ (从高到低)</option>
+              <option value="price_asc">身价 ↑ (从低到高)</option>
+              <option value="slaves_desc">奴隶数 ↓ (从多到少)</option>
+              <option value="slaves_asc">奴隶数 ↑ (从少到多)</option>
+              <option value="qq_asc">QQ 顺序</option>
+            </select>
+          </div>
+          <div style="display:flex;gap:5px;margin-left:auto;flex-wrap:wrap">
+            <button id="btnSlaveCalibrate" class="ghost" style="color:var(--acc);border-color:var(--accSoft2)">⚖️ 一键校准全员身价</button>
+            <button id="btnSlaveRefresh" class="ghost">🔄 刷新</button>
+          </div>
+        </div>
+        <div class="search"><span>🔍</span><input id="slaveSearch" placeholder="搜索 QQ / 昵称 / 主人…" /></div>
+        <div class="hint" id="slaveHint">实时展示各群用户身价、主人关系与武装状态；点击表头可快捷排序。</div>
+        <div class="table-wrap">
+          <table>
+            <thead><tr>
+              <th>群号</th>
+              <th>QQ</th>
+              <th>昵称</th>
+              <th>主人</th>
+              <th data-slavesort="price" style="cursor:pointer" title="点击按身价排序">身价 ⇕</th>
+              <th data-slavesort="slaves" style="cursor:pointer" title="点击按奴隶数排序">奴隶数 ⇕</th>
+              <th>保护状态</th>
+              <th>佩戴武器</th>
+            </tr></thead>
+            <tbody id="slaveBody"></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <!-- 精灵用户 -->
+    <div class="tab" id="tab-spirit_users">
+      <div class="panel">
+        <div class="toolbar">
+          <h2>精灵系统 · 用户情况</h2>
+          <div style="display:flex;align-items:center;gap:5px;flex-wrap:wrap">
+            
+            <label style="color:var(--muted);font-size:12px;font-weight:500;margin-left:4px">排序：</label>
+            <select id="spiritUserSort" style="padding:3px 6px;font-size:11.5px;min-width:100px">
+              <option value="power_desc">总战力 ↓ (从强到弱)</option>
+              <option value="power_asc">总战力 ↑ (从弱到强)</option>
+              <option value="level_desc">最高 Lv ↓</option>
+              <option value="count_desc">精灵数 ↓</option>
+              <option value="qq_asc">QQ 顺序</option>
+            </select>
+          </div>
+          <div style="display:flex;gap:5px;margin-left:auto;flex-wrap:wrap">
+            <button id="btnSpiritUsersRefresh" class="ghost">🔄 刷新</button>
+          </div>
+        </div>
+        <div class="search"><span>🔍</span><input id="spiritSearch" placeholder="搜索 QQ / 昵称 / 精灵…" /></div>
+        <div class="hint" id="spiritUsersHint">实时展示各群精灵训练师、出战宝可梦与综合战力统计。</div>
+        <div class="table-wrap">
+          <table>
+            <thead><tr>
+              <th>群号</th>
+              <th>QQ</th>
+              <th>昵称</th>
+              <th data-spiritsort="count" style="cursor:pointer" title="点击按精灵数排序">精灵数 ⇕</th>
+              <th>出战精灵</th>
+              <th>最强精灵</th>
+              <th data-spiritsort="level" style="cursor:pointer" title="点击按等级排序">最高 Lv ⇕</th>
+              <th data-spiritsort="power" style="cursor:pointer" title="点击按战力排序">总战力 ⇕</th>
+              <th>背包详情</th>
+            </tr></thead>
+            <tbody id="spiritUsersBody"></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <!-- 配置（必要配置） -->
+    <div class="tab" id="tab-config">
+      <div class="panel">
+        <h2>⚙️ 必要核心配置</h2>
+        <div class="hint">展示系统网络、私聊、维护与备份等核心配置项，玩法数值请到「指令与玩法」Tab 调整。</div>
+        <div class="search"><span>🔍</span><input id="cfgSearch" placeholder="搜索配置项名称 / 作用说明…" /></div>
+        <div id="cfgForm"></div>
+        <div class="toolbar" style="margin-top:12px">
+          <button id="btnSave">💾 保存配置</button>
+          <button id="btnAutoBalance2" class="ghost" style="color:var(--warn);border-color:var(--warnSoft)">🎯 数值智能平衡</button>
+          <span id="activeBalanceBadge1" style="display:inline-flex;align-items:center;gap:4px;padding:3px 9px;border-radius:12px;font-size:11.5px;font-weight:600;background:rgba(234,179,8,0.15);color:#EAB308;border:1px solid rgba(234,179,8,0.3);cursor:pointer" title="点击切换数值平衡模式">🟡 当前生效：休闲高福利模式</span>
+          <button id="btnReset" class="ghost">↩️ 恢复默认值</button>
+          <button id="btnClearAll" class="ghost del" style="margin-left:auto" title="清空所有数据需三重确认">⚠️ 清空所有数据</button>
+          <span class="msg" id="saveMsg"></span>
+        </div>
+      </div>
+    </div>
+
+    <!-- 排行 -->
+    <div class="tab" id="tab-rank">
+      <div class="panel">
+        <h2>🏆 排行榜</h2>
+        <div class="toolbar">
+          <label style="color:var(--muted);font-size:12px;font-weight:500">排行维度：</label>
+          <select id="rankType" style="min-width:110px;padding:3px 6px">
+            <option value="money">💰 个人财富</option>
+            <option value="sign">📅 签到次数</option>
+            <option value="stamina">⚡ 体力数值</option>
+            <option value="charm">💄 魅力指数</option>
+            <option value="deposit">🏦 银行存款</option>
+          </select>
+          <button id="btnRank" class="ghost">🔄 刷新</button>
+        </div>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th style="width:45px"># 排名</th><th>昵称</th><th>QQ</th><th>数值</th></tr></thead>
+            <tbody id="rankBody"></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <!-- 指令（玩法设置） -->
+    <div class="tab" id="tab-cmds">
+      <div class="panel">
+        <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px;margin-bottom:6px">
+          <h2 style="margin:0">🎮 指令与玩法设置</h2>
+          <div style="display:flex;align-items:center;gap:6px">
+            <button class="ghost sm" id="btnCmdExpandAll" type="button">全部展开</button>
+            <button class="ghost sm" id="btnCmdCollapseAll" type="button">全部收起</button>
+            <button class="sm" id="btnAutoBalance" type="button" style="background:linear-gradient(135deg, #FF9500, #FF2D55);color:#fff;font-weight:600;border:none;box-shadow:0 2px 8px rgba(255,149,0,0.3)">🎯 数值智能平衡</button>
+            <span id="activeBalanceBadge2" style="display:inline-flex;align-items:center;gap:4px;padding:3px 9px;border-radius:12px;font-size:11.5px;font-weight:600;background:rgba(234,179,8,0.15);color:#EAB308;border:1px solid rgba(234,179,8,0.3);cursor:pointer" title="点击切换数值平衡模式">🟡 当前生效：休闲高福利模式</span>
+            <button class="sm" id="btnCmdAddCustomTop" type="button">＋ 自定义指令</button>
+          </div>
+        </div>
+        <div class="hint" style="margin-bottom:8px">按系统展开可查看全部指令；点击任意指令标签即可打开编辑弹窗，自由修改【触发词/别名】、【自定义回复文案】以及关联玩法数值。</div>
+        <div class="search"><span>🔍</span><input id="cmdSearch" placeholder="搜索指令名称 / 关联玩法数值…" /></div>
+        <div id="cmdList"></div>
+      </div>
+    </div>
+
+    <!-- 图鉴 -->
+    <div class="tab" id="tab-shops">
+      <div class="panel">
+        <div class="toolbar">
+          <h2>📚 图鉴</h2>
+          <div style="display:flex;gap:5px;margin-left:auto;flex-wrap:wrap">
+            <button id="btnVisualItemBuilder" class="sm" style="background:linear-gradient(135deg, #6366F1, #8B5CF6);color:#fff;font-weight:600;border:none;box-shadow:0 2px 8px rgba(99,102,241,0.3);cursor:pointer">🎨 图鉴可视化工坊</button>
+            <button id="btnShopLoad" class="ghost">🔄 加载</button>
+            <button id="btnShopExport" class="ghost">📥 导出</button>
+            <button id="btnShopImport" class="ghost">📤 导入</button>
+            <button id="btnShopSave">💾 保存</button>
+          </div>
+          <span class="msg" id="shopMsg"></span>
+        </div>
+        <div class="hint">左栏为商城（可改价/增删），右栏为图鉴（所有道具按系统归类，如 奴隶系统-武器）。持久化至 商城图鉴/精灵图鉴 配置。</div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-top:10px">
+          <div>
+            <h3 style="margin:0 0 8px;font-size:13px">🛒 商城</h3>
+            <div id="shopRideBox"></div>
+            <div id="shopWeaponBox" style="margin-top:10px"></div>
+            <div id="shopSpiritBox" style="margin-top:10px"></div>
+          </div>
+          <div>
+            <h3 style="margin:0 0 8px;font-size:13px">📖 图鉴</h3>
+            <div id="atlasBox" style="max-height:600px;overflow:auto;border:1px solid var(--line);border-radius:8px;padding:8px"></div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 精灵图鉴 -->
+    <div class="tab" id="tab-spirits">
+      <div class="panel">
+        <div class="toolbar">
+          <h2>📖 精灵图鉴编辑</h2>
+          <div style="display:flex;gap:5px;margin-left:auto;flex-wrap:wrap">
+            <button id="btnVisualItemBuilder2" class="sm" style="background:linear-gradient(135deg, #6366F1, #8B5CF6);color:#fff;font-weight:600;border:none;box-shadow:0 2px 8px rgba(99,102,241,0.3);cursor:pointer">🎨 图鉴可视化工坊</button>
+            <button id="btnSpiritLoad" class="ghost">🔄 加载</button>
+            <button id="btnSpiritExport" class="ghost">📥 导出</button>
+            <button id="btnSpiritImport" class="ghost">📤 导入</button>
+            <button id="btnSpiritSave">💾 保存图鉴</button>
+          </div>
+          <span class="msg" id="spiritMsg"></span>
+        </div>
+        <div class="hint">快捷编辑「精灵地图(出没精灵/推荐等级)」与「精灵属性/进化路线」。展开地图卡片可浏览对应精灵，点击「保存图鉴」持久化。</div>
+        <div class="search"><span>🔍</span><input id="spiritSearch" placeholder="搜索 地图名 / 精灵名称…" /></div>
+        <div id="spiritBody"></div>
+      </div>
+    </div>
+
+    <!-- 备份 -->
+    <div class="tab" id="tab-backups">
+      <div class="panel">
+        <div class="toolbar">
+          <h2>💾 自动备份管理</h2>
+          <div style="display:flex;gap:5px;flex-wrap:wrap">
+            <button id="btnDbDoctor" class="ghost" style="color:var(--succ);border-color:var(--succSoft);font-weight:600">🩺 数据库体检与整理</button>
+            <button id="btnBackupNow" class="ghost">⚡ 立即备份</button>
+            <button id="btnBackupRefresh" class="ghost">🔄 刷新</button>
+            <button id="btnBackupRestore" class="ghost">🔄 恢复选中</button>
+            <button id="btnBackupExportSel" class="ghost">📥 导出</button>
+          </div>
+          <div style="display:flex;gap:5px;margin-left:auto;flex-wrap:wrap">
+            <button id="btnBackupDelete" class="ghost del">🗑️ 删除选中</button>
+          </div>
+        </div>
+        <div class="hint">系统每 3 小时自动增量冷备（或发送 `备份xb`）归档至 <code>data/backups/YYYY-MM-DD/HHMMSS.db</code>，点击文件项可快速恢复或单独导出。</div>
+        <div class="hint crumbs" id="backupCrumbs" style="margin:5px 0 8px"></div>
+        <div class="search"><span>🔍</span><input id="backupSearch" placeholder="搜索日期目录 / 备份文件名…" /></div>
+        <div id="backupBrowser"></div>
+      </div>
+      <div class="panel" style="margin-top:10px">
+        <h2>📦 旧库数据导入（兼容新旧格式）</h2>
+        <div class="hint">支持上传 <code>.ini</code>（GBK/UTF8 奴隶/小白群员信息）、<code>.db</code>（nuli_slave.db）或 <code>.json</code> 导出包，系统自动识别并执行幂等导入。</div>
+        <div class="toolbar">
+          <button id="btnLegacyPick" class="ghost">📤 导入旧库文件</button>
+          <span class="hint" id="legacyMsg"></span>
+        </div>
+      </div>
+    </div>
+
+    <!-- 根目录 -->
+    <div class="tab" id="tab-imgs">
+      <div class="panel">
+        <div class="toolbar">
+          <h2>📁 根目录文件浏览器</h2>
+          <div style="display:flex;gap:5px;flex-wrap:wrap">
+            <button id="btnImgBack" class="ghost">⬆️ 返回上级</button>
+            <button id="btnImgNewFolder" class="ghost">📁 新建文件夹</button>
+            <button id="btnImgUp">📤 上传文件</button>
+            <button id="btnImgImport" class="ghost">📤 导入</button>
+            <button id="btnImgExport" class="ghost">📥 导出</button>
+            <button id="btnImgCopy" class="ghost">📋 复制</button>
+            <button id="btnImgPaste" class="ghost">📥 粘贴</button>
+            <button id="btnImgRename" class="ghost">✏️ 重命名</button>
+          </div>
+          <div style="display:flex;gap:5px;margin-left:auto;flex-wrap:wrap">
+            <button id="btnImgDelete" class="ghost del">🗑️ 删除选中</button>
+          </div>
+        </div>
+        <div class="hint crumbs" id="imgCrumbs" style="margin:5px 0 8px"></div>
+        <div class="search"><span>🔍</span><input id="imgSearch" placeholder="搜索文件或文件夹名称…" /></div>
+        <div id="imgBrowser"></div>
+      </div>
+    </div>
+
+    <!-- 群聊开关 -->
+    <div class="tab" id="tab-groups">
+      <div class="panel">
+        <div class="toolbar">
+          <h2>👥 群聊开关</h2>
+          <div style="display:flex;align-items:center;gap:8px;margin-left:auto;flex-wrap:wrap">
+            <div style="display:flex;align-items:center;background:var(--panel2);border:1px solid var(--line);border-radius:10px;padding:2px 4px 2px 10px;gap:6px">
+              <input id="groupsAddGid" placeholder="输入群号添加…" style="width:130px;border:0;background:transparent;outline:none;font-size:12.5px;padding:4px 0">
+              <button id="btnGroupsAdd" class="sm" style="padding:4px 12px;border-radius:7px">➕ 添加</button>
+            </div>
+            <button id="btnGroupsRefresh" class="ghost">🔄 刷新</button>
+          </div>
+        </div>
+        <div class="hint">关闭单个群聊后，该群内 Bot 不响应任何指令（包括超管），其他群不受影响。群聊在首次收到消息后自动收录。</div>
+        <div class="search" style="margin-top:10px"><span class="search-icon">🔍</span><input id="groupsSearch" placeholder="搜索群号 / 状态…" /></div>
+        <div class="table-wrap" style="margin-top:8px">
+          <table>
+              <thead><tr><th>群号</th><th>成员数</th><th>状态</th><th>开关</th><th>删除</th></tr></thead>
+            <tbody id="groupsBody"></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <div id="footErr"></div>
+  </div>
+  
+  <div id="lightbox"></div>
+
+  <!-- 指令编辑模态 -->
+  <div id="cmdModal">
+    <div class="cmd-modal-box" style="width:min(580px,94vw);border-radius:20px">
+      <div class="cmd-modal-header" style="padding:16px 20px">
+        <div style="display:flex;align-items:center;gap:10px">
+          <h3 id="cmdModalTitle" style="font-size:16px;font-weight:600;margin:0">编辑指令</h3>
+          <span id="cmdModalSysBadge" class="badge badge-primary" style="font-size:11px">奴隶系统</span>
+        </div>
+        <button type="button" class="iconBtn" id="btnCmdModalClose" style="width:30px;height:30px;font-size:16px;border-radius:50%" title="关闭">✕</button>
+      </div>
+
+      <div class="cmd-modal-body" style="padding:16px 20px;gap:12px;max-height:75vh">
+        <!-- 基础配置卡片 -->
+        <div class="apple-card">
+          <div class="apple-card-row">
+            <div>
+              <div style="font-weight:600;font-size:13px">启用本指令</div>
+              <div style="font-size:11.5px;color:var(--muted)">关闭后该指令不再响应用户消息</div>
+            </div>
+            <label class="switch">
+              <input type="checkbox" id="cmdModalOn" checked>
+              <span class="slider-toggle"></span>
+            </label>
+          </div>
+          <div class="apple-card-divider"></div>
+          <div class="apple-card-field">
+            <label>触发词 / 别名 <small style="font-weight:normal;color:var(--muted)">（多个别名用竖线 | 分隔）</small></label>
+            <input id="cmdModalName" placeholder="例如：买下|收下|购买奴隶">
+          </div>
+          <div class="apple-card-divider"></div>
+          <div class="apple-card-field">
+            <label>映射引擎逻辑 <small style="font-weight:normal;color:var(--muted)">（留空 = 纯自定义回复；填入已有指令 = 复用引擎核心逻辑）</small></label>
+            <input id="cmdModalCmd" placeholder="例如：买下 / 签到 / 赌博">
+            <div class="cmd-dflt" id="cmdModalCmdNote" style="margin-top:4px;font-size:11.5px"></div>
+          </div>
+        </div>
+
+        <!-- 回复文案卡片 -->
+        <div class="apple-card">
+          <div style="display:flex;align-items:center;justify-content:space-between">
+            <label style="font-weight:600;font-size:13px;margin:0">自定义回复文案 <small style="font-weight:normal;color:var(--muted)">（多条随机用 | 分隔）</small></label>
+            <button type="button" id="btnVarsHelp" class="ghost sm" style="padding:2px 8px;font-size:11px">常用变量 ▾</button>
+          </div>
+          <textarea id="cmdModalReply" rows="3" placeholder="留空使用系统默认回复；{回复} 引用引擎回复，可用 {name}/{qq}/{gid}/{time}/{coin}/{at}"></textarea>
+          
+          <div id="varsHelp" style="display:none;padding:10px;background:var(--panel);border:1px solid var(--line);border-radius:10px;font-size:11.5px">
+            <div style="font-weight:600;margin-bottom:6px;color:var(--text)">常用变量（点击快速插入）：</div>
+            <div style="display:flex;flex-wrap:wrap;gap:5px">
+              <code class="var-tag" data-var="{name}">{name} 昵称</code>
+              <code class="var-tag" data-var="{qq}">{qq} QQ号</code>
+              <code class="var-tag" data-var="{gid}">{gid} 群号</code>
+              <code class="var-tag" data-var="{time}">{time} 时间</code>
+              <code class="var-tag" data-var="{date}">{date} 日期</code>
+              <code class="var-tag" data-var="{coin}">{coin} 货币名</code>
+              <code class="var-tag" data-var="{at}">{at} @发送者</code>
+              <code class="var-tag" data-var="{回复}">{回复} 引擎原回复</code>
+            </div>
+          </div>
+
+          <!-- 默认回复预览 Callout 块 -->
+          <div class="cmd-reply-preview">
+            <div class="cmd-reply-preview-label">💡 引擎默认回复参考</div>
+            <div id="cmdModalDflt" class="cmd-reply-preview-content"></div>
+          </div>
+        </div>
+
+        <!-- 关联玩法数值卡片 -->
+        <div class="apple-card">
+          <div style="font-weight:600;font-size:13px">⚙️ 关联玩法数值调节 <small style="font-weight:normal;color:var(--muted)">（修改后点击下方保存指令同步生效）</small></div>
+          <div id="cmdModalNums" class="cmd-nums"></div>
+        </div>
+      </div>
+
+      <div class="cmd-modal-footer" style="padding:14px 20px">
+        <span id="cmdModalMsg" class="msg" style="margin-right:auto"></span>
+        <button id="cmdModalDel" class="ghost del" style="display:none">🗑️ 删除自定义</button>
+        <button id="cmdModalCancel" class="ghost">取消</button>
+        <button id="cmdModalSave">💾 保存指令</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- 全局统一高质感模态弹窗 -->
+  <div id="appModal">
+    <div class="cmd-modal-box" style="width:min(440px,92vw);padding:24px;border-radius:18px">
+      <div style="display:flex;align-items:center;gap:10px;margin-bottom:12px">
+        <span id="appModalIcon" style="font-size:22px;line-height:1">ℹ️</span>
+        <h3 id="appModalTitle" style="margin:0;font-size:16px;font-weight:600">系统提示</h3>
+      </div>
+      <div id="appModalContent" style="color:var(--text-secondary);font-size:13px;line-height:1.55;margin-bottom:16px"></div>
+      <div id="appModalInputWrap" style="margin-bottom:16px;display:none">
+        <input id="appModalInput" style="width:100%;padding:8px 12px;border:1px solid var(--line);border-radius:8px;background:var(--panel2);color:var(--text);font-size:13px;outline:none">
+      </div>
+      <div style="display:flex;gap:8px;justify-content:flex-end">
+        <button id="appModalCancel" class="ghost" style="padding:6px 16px">取消</button>
+        <button id="appModalOk" style="padding:6px 20px">确定</button>
+      </div>
+    </div>
+  </div>
+
+  <script src="./app.js"></script>
+</body>
+</html>
