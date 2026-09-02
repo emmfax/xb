@@ -95,7 +95,7 @@ def _raw_file_response(data_bytes, filename):
 PLUGIN_ID = "astrbot_plugin_xbbot"
 PLUGIN_DESC = "小白(奴/签/银/娱/私/灵/骑/超管/帮派/冒险+主菜单+WebUI), 现代SQLite存储"
 PLUGIN_AUTHOR = "Light"
-PLUGIN_VERSION = "0.67.6"
+PLUGIN_VERSION = "0.67.7"
 PLUGIN_REPO = "https://github.com/emmfax/xb"
 
 # 复用 router 的主菜单，保持单源
