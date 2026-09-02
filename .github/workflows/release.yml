@@ -42,7 +42,8 @@ jobs:
           name: 小白插件 ${{ github.ref_name }} 正式版
           tag_name: ${{ github.ref }}
           files: ${{ steps.build_zip.outputs.zip_name }}
-          generate_release_notes: true
+          generate_release_notes: false
+          body_path: CHANGELOG.md
           draft: false
           prerelease: false
         env:

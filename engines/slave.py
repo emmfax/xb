@@ -56,7 +56,31 @@ except ImportError:
 
 _BASE    = _os.path.dirname(_os.path.dirname(_os.path.abspath(__file__)))  # 插件根
 _ENG_DIR = _os.path.join(_BASE, "engines")
-DATA_DIR = _os.path.join(_BASE, "data")
+
+def _resolve_persistent_data_dir():
+    # 优先检测 AstrBot 官方持久化数据目录 data/plugin_data/astrbot_plugin_xbbot
+    try:
+        parent_plugins = _os.path.dirname(_BASE)
+        if _os.path.basename(parent_plugins) == "plugins":
+            astrbot_data_root = _os.path.dirname(parent_plugins)
+            persistent_root = _os.path.join(astrbot_data_root, "plugin_data", "astrbot_plugin_xbbot")
+            _os.makedirs(persistent_root, exist_ok=True)
+            # 自动无缝迁移旧数据(不覆盖)
+            for f in ("nuli_slave.db", "config.json", "events.json"):
+                src_f = _os.path.join(_BASE, "data", f)
+                dst_f = _os.path.join(persistent_root, f)
+                if _os.path.isfile(src_f) and not _os.path.isfile(dst_f):
+                    try:
+                        import shutil as _sh
+                        _sh.copy2(src_f, dst_f)
+                    except Exception:
+                        pass
+            return persistent_root
+    except Exception:
+        pass
+    return _os.path.join(_BASE, "data")
+
+DATA_DIR = _resolve_persistent_data_dir()
 GROUPS_DIR = _os.path.join(DATA_DIR, "groups")                     # 兼容旧目录(迁移用)
 WALLET_DIR = _os.path.join(DATA_DIR, "wallet")                     # 兼容旧目录(迁移用)
 DB_PATH = _os.path.join(DATA_DIR, "nuli_slave.db")                 # 现代存储(SQLite)
