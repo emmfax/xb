@@ -2,7 +2,7 @@
 <html lang="zh-CN">
 <head>
   <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
   <title>管理控制台</title>
   <style>
     :root {
@@ -1291,13 +1291,214 @@
     #lightbox img { max-width: 90vw; max-height: 86vh; border-radius: 12px; box-shadow: 0 20px 50px rgba(0,0,0,0.6); }
     #lightbox.show { display: flex; }
     #lightbox .cap { position: absolute; bottom: 20px; left: 0; right: 0; text-align: center; color: #FFFFFF; font-size: 13px; font-weight: 500; }
+  
+    /* ==========================================================================
+       全面移动端 UI 深度适配 (iOS / Android / 微信 / QQ 内置浏览器)
+       ========================================================================== */
+    html {
+      -webkit-text-size-adjust: 100%;
+      -webkit-tap-highlight-color: transparent;
+      overflow-x: hidden;
+    }
+    
+    body {
+      overflow-x: hidden;
+      width: 100%;
+      max-width: 100vw;
+    }
+
+    .responsive-charts-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 14px;
+      margin-top: 8px;
+    }
+
+    .responsive-shop-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 12px;
+      margin-top: 10px;
+    }
+
+    @media (max-width: 768px) {
+      .wrap {
+        padding: 8px 8px calc(24px + env(safe-area-inset-bottom, 0px));
+      }
+
+      header {
+        padding: 8px 12px;
+        margin-bottom: 8px;
+        top: env(safe-area-inset-top, 6px);
+        border-radius: 12px;
+      }
+
+      .brand h1 {
+        font-size: 15px;
+      }
+
+      .brand .ver {
+        font-size: 10px;
+        padding: 1px 6px;
+      }
+
+      #verBadge {
+        font-size: 10px !important;
+        padding: 2px 6px !important;
+      }
+
+      .tab-nav-btn {
+        display: none !important;
+      }
+
+      .tabs-wrapper {
+        padding: 2px;
+        border-radius: 10px;
+        margin-bottom: 8px;
+        gap: 0;
+      }
+
+      .tabs {
+        padding: 2px;
+        gap: 2px;
+        scroll-snap-type: x proximity;
+      }
+
+      .tabs button {
+        padding: 6px 9px;
+        font-size: 11.5px;
+        min-height: 32px;
+        scroll-snap-align: center;
+      }
+
+      .panel {
+        padding: 12px;
+        border-radius: 12px;
+        margin-bottom: 10px;
+      }
+
+      .panel h2 {
+        font-size: 13.5px;
+        margin-bottom: 8px;
+      }
+
+      /* 大屏 6 大指标卡在手机端 2 列对齐 */
+      #analyticsKpiGrid {
+        grid-template-columns: repeat(2, 1fr) !important;
+        gap: 6px !important;
+      }
+
+      #analyticsKpiGrid .card {
+        padding: 8px 10px !important;
+      }
+
+      #analyticsKpiGrid .card div:nth-child(2) {
+        font-size: 16px !important;
+      }
+
+      /* 阶层金字塔与活跃折线图单列垂直排布 */
+      .responsive-charts-grid, #analyticsChartsWrap {
+        grid-template-columns: 1fr !important;
+        gap: 10px !important;
+      }
+
+      /* 商城与图鉴单列排布 */
+      .responsive-shop-grid {
+        grid-template-columns: 1fr !important;
+        gap: 10px !important;
+      }
+
+      /* 快捷必要配置 */
+      .ov-req {
+        grid-template-columns: 1fr !important;
+        gap: 8px !important;
+      }
+
+      /* 工具栏流式排版 */
+      .toolbar {
+        flex-direction: column !important;
+        align-items: stretch !important;
+        gap: 6px !important;
+      }
+
+      .toolbar > div {
+        width: 100% !important;
+        justify-content: flex-start !important;
+        margin-left: 0 !important;
+      }
+
+      .toolbar button, .toolbar select {
+        flex: 1 1 auto;
+        min-height: 32px;
+        justify-content: center;
+      }
+
+      /* 搜索框全宽通透 */
+      .search {
+        padding: 7px 10px;
+        margin-bottom: 8px;
+      }
+
+      .search input {
+        font-size: 13px !important;
+      }
+
+      /* 表格水平滑动手势与内边距 */
+      .table-wrap {
+        border-radius: 8px;
+        margin-top: 6px;
+      }
+
+      th, td {
+        padding: 6px 8px;
+        font-size: 11px;
+      }
+
+      /* 模态弹窗手机端自适应 */
+      .cmd-modal-box {
+        width: 95vw !important;
+        max-height: 90vh !important;
+        border-radius: 16px !important;
+      }
+
+      .cmd-modal-header {
+        padding: 12px 14px !important;
+      }
+
+      .cmd-modal-body {
+        padding: 12px 14px !important;
+        max-height: calc(90vh - 110px) !important;
+        gap: 10px !important;
+      }
+
+      .cmd-modal-footer {
+        padding: 10px 14px !important;
+        flex-wrap: wrap !important;
+      }
+
+      .cmd-modal-footer button {
+        flex: 1 1 auto;
+        min-height: 34px;
+      }
+
+      .cmd-nums {
+        grid-template-columns: 1fr !important;
+      }
+
+      #appModal .cmd-modal-box {
+        width: 92vw !important;
+        padding: 16px !important;
+        border-radius: 14px !important;
+      }
+    }
+
   </style>
 </head>
 <body>
   <div class="wrap">
     <header>
       <div class="brand">
-        <h1>管理控制台 <span class="ver">v0.67.8</span> <span id="verBadge" style="display:none;font-size:11px;padding:3px 8px;border-radius:12px;background:linear-gradient(135deg, #10B981, #059669);color:#fff;font-weight:600;cursor:pointer;margin-left:4px;box-shadow:0 2px 6px rgba(16,185,129,0.3)" title="点击查看更新并一键升级">🚀 发现新版本</span></h1>
+        <h1>管理控制台 <span class="ver">v0.67.9</span> <span id="verBadge" style="display:none;font-size:11px;padding:3px 8px;border-radius:12px;background:linear-gradient(135deg, #10B981, #059669);color:#fff;font-weight:600;cursor:pointer;margin-left:4px;box-shadow:0 2px 6px rgba(16,185,129,0.3)" title="点击查看更新并一键升级">🚀 发现新版本</span></h1>
         <div class="sub">
           <span class="status-badge"><span class="status-dot"></span> 运行正常</span>
         </div>
@@ -1369,7 +1570,7 @@
         </div>
 
         <!-- 图表布局：阶层金字塔 + 24小时活跃折线图 -->
-        <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-top:8px" id="analyticsChartsWrap">
+        <div class="responsive-charts-grid" id="analyticsChartsWrap">
           <!-- 财富阶层分布图 -->
           <div style="background:var(--panel2);border-radius:12px;border:1px solid var(--line);padding:14px">
             <div style="font-weight:600;font-size:12.5px;color:var(--text);margin-bottom:10px">📊 财富阶层与贫富分布金字塔</div>
@@ -1609,7 +1810,7 @@
           <span class="msg" id="shopMsg"></span>
         </div>
         <div class="hint">左栏为商城（可改价/增删），右栏为图鉴（所有道具按系统归类，如 奴隶系统-武器）。持久化至 商城图鉴/精灵图鉴 配置。</div>
-        <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-top:10px">
+        <div class="responsive-shop-grid">
           <div>
             <h3 style="margin:0 0 8px;font-size:13px">🛒 商城</h3>
             <div id="shopRideBox"></div>
