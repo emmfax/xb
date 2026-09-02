@@ -1375,7 +1375,7 @@ async function exportAllUsers() {
         count: usersList.length,
         users: usersList,
         export_at: res.export_at || Math.floor(Date.now() / 1000),
-        version: res.version || "v0.67.1"
+        version: res.version || "0.67.2"
       };
       const jsonStr = JSON.stringify(payload, null, 2);
       triggerExportResult({
