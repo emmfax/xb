@@ -1,0 +1,48 @@
+name: Auto Release Plugin
+
+on:
+  push:
+    tags:
+      - 'v*'
+
+permissions:
+  contents: write
+
+jobs:
+  build-and-release:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Build Clean Plugin Zip
+        id: build_zip
+        run: |
+          TAG_NAME=${GITHUB_REF#refs/tags/}
+          echo "Building package for tag: $TAG_NAME"
+          ZIP_NAME="astrbot_plugin_xbbot_${TAG_NAME}.zip"
+          
+          # Clean up any potential artifacts/caches
+          find . -type d -name "__pycache__" -exec rm -rf {} + || true
+          find . -type f -name "*.pyc" -delete || true
+          find . -type f -name "*.pyo" -delete || true
+          find . -type f -name "*.db*" -delete || true
+          rm -rf data/backups || true
+          
+          # Package all plugin files into zip
+          zip -r "$ZIP_NAME" . -x "*.git*" "*.github*" "*__pycache__*" "*.pyc" "*.db*" "data/backups/*"
+          
+          echo "zip_name=$ZIP_NAME" >> $GITHUB_OUTPUT
+          ls -lh "$ZIP_NAME"
+
+      - name: Create GitHub Release and Attach Zip
+        uses: softprops/action-gh-release@v2
+        with:
+          name: 小白插件 ${{ github.ref_name }} 正式版
+          tag_name: ${{ github.ref }}
+          files: ${{ steps.build_zip.outputs.zip_name }}
+          generate_release_notes: true
+          draft: false
+          prerelease: false
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
