@@ -181,15 +181,15 @@ def cmd_draw(gid, qq, amount=1):
         win = must_win or (random.randint(1, 100) <= ST.cfgi("抽奖配置", "中奖率", 60))
         if win:
             pool = [
-                (ST.coin_name(), ST.cfgi("抽奖配置", "现金奖", 500)),
-                ("stamina", ST.cfgi("抽奖配置", "体力奖", 20)),
-                ("charm", ST.cfgi("抽奖配置", "魅力奖", 20)),
+                (ST.coin_name(), "coin", ST.cfgi("抽奖配置", "现金奖", 500)),
+                ("体力", "stamina", ST.cfgi("抽奖配置", "体力奖", 20)),
+                ("魅力", "charm", ST.cfgi("抽奖配置", "魅力奖", 20)),
             ]
-            name, val = random.choice(pool)
-            if name == ST.coin_name():
+            name_cn, kind, val = random.choice(pool)
+            if kind == "coin":
                 ST.coins_add(gid, qq, val)
                 total_coin += val
-            elif name == "stamina":
+            elif kind == "stamina":
                 ST.acct_add(gid, qq, "stamina", val)
                 total_tili += val
             else:
@@ -200,9 +200,9 @@ def cmd_draw(gid, qq, amount=1):
             if amount == 1:
                 a.set("lottery_lose_streak", "0")
                 ST.acct_save(gid, qq)
-                return f"恭喜，抽奖成功！获得{name}+{val}"
+                return f"恭喜，抽奖成功！获得{name_cn}+{val}"
             else:
-                out_lines.append(f"第{i+1}抽：恭喜 获得{name}+{val}")
+                out_lines.append(f"第{i+1}抽：恭喜 获得{name_cn}+{val}")
         else:
             lose_streak += 1
             if amount == 1:

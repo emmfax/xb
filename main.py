@@ -108,7 +108,7 @@ def _raw_file_response(data_bytes, filename):
 PLUGIN_ID = "astrbot_plugin_xbbot"
 PLUGIN_DESC = "小白(奴/签/银/娱/私/灵/骑/超管/帮派/冒险+主菜单+WebUI), 现代SQLite存储"
 PLUGIN_AUTHOR = "Light"
-PLUGIN_VERSION = "0.68.9"
+PLUGIN_VERSION = "0.68.10"
 PLUGIN_REPO = "https://github.com/emmfax/xb"
 
 # 复用 router 的主菜单，保持单源
@@ -187,6 +187,11 @@ class XbBot(Star):
                     pass
         except Exception:
             pass
+        if _logger_layer:
+            try:
+                _logger_layer.info(f"小白插件 v{PLUGIN_VERSION} 启动初始化完成 (PID={os.getpid()})")
+            except Exception:
+                pass
         # Web API — 9Tab 懒加载
         context.register_web_api(f"/{PLUGIN_ID}/stats", self.page_stats, ["GET"], "游戏数据总览")
         context.register_web_api(f"/{PLUGIN_ID}/rank", self.page_rank, ["GET"], "排行榜")
@@ -227,8 +232,8 @@ class XbBot(Star):
         context.register_web_api(f"/{PLUGIN_ID}/groups/delete", self.page_groups_delete, ["POST"], "删除群聊配置")
         context.register_web_api(f"/{PLUGIN_ID}/admin/clear", self.page_clear_all, ["POST"], "清空所有数据（三重确认）")
         context.register_web_api(f"/{PLUGIN_ID}/version/check", self.page_version_check, ["GET", "POST"], "在线检查版本更新")
-        context.register_web_api(f"/{PLUGIN_ID}/logs", self.page_logs_get, ["GET"], "获取插件运行日志")
-        context.register_web_api(f"/{PLUGIN_ID}/logs/clear", self.page_logs_clear, ["POST"], "清空插件运行日志")
+        context.register_web_api(f"/{PLUGIN_ID}/logs", self.page_logs_get, ["GET", "POST"], "获取插件运行日志")
+        context.register_web_api(f"/{PLUGIN_ID}/logs/clear", self.page_logs_clear, ["POST", "GET"], "清空插件运行日志")
         context.register_web_api(f"/{PLUGIN_ID}/logs/export", self.page_logs_export, ["GET", "POST"], "导出插件运行日志")
         ST.set_backup_dir(os.path.join(_BASE, "data", "backups"))
 

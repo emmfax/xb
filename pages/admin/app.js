@@ -129,26 +129,27 @@ function toast(msg, type) {
 // 请求 API 封装（支持 GET 自动转参数拼在 URL 与 fallback POST 双向兼容）
 async function callApi(endpoint, data = {}, method = "GET") {
   const _b = getBridge();
+  const cleanEp = String(endpoint || "").replace(/^\/+/, "").split("?")[0];
   const cleanData = {};
-  Object.keys(data).forEach((k) => {
-    if (data[k] !== undefined && data[k] !== null) {
-      cleanData[k] = String(data[k]);
-    }
-  });
+  if (data && typeof data === "object") {
+    Object.keys(data).forEach((k) => {
+      if (data[k] !== undefined && data[k] !== null) {
+        cleanData[k] = String(data[k]);
+      }
+    });
+  }
   if (method === "GET") {
     try {
-      const q = new URLSearchParams(cleanData).toString();
-      const url = q ? `${endpoint}?${q}` : endpoint;
-      let res = await _b.apiGet(url, cleanData);
-      if (!res || (typeof res === "object" && !Object.keys(res).length)) {
-        res = await _b.apiPost(endpoint, cleanData);
+      let res = await _b.apiGet(cleanEp, cleanData);
+      if (!res || (typeof res === "object" && !Object.keys(res).length) || (res && res.status === "error" && res.message && res.message.includes("未找到"))) {
+        res = await _b.apiPost(cleanEp, cleanData);
       }
       return res;
     } catch (e) {
-      return await _b.apiPost(endpoint, cleanData);
+      return await _b.apiPost(cleanEp, cleanData);
     }
   } else {
-    return await _b.apiPost(endpoint, cleanData);
+    return await _b.apiPost(cleanEp, cleanData);
   }
 }
 
@@ -1382,7 +1383,7 @@ async function exportAllUsers() {
         count: usersList.length,
         users: usersList,
         export_at: res.export_at || Math.floor(Date.now() / 1000),
-        version: res.version || "0.68.9"
+        version: res.version || "0.68.10"
       };
       const jsonStr = JSON.stringify(payload, null, 2);
       triggerExportResult({
@@ -3561,34 +3562,43 @@ async function loadLogs(isAuto = false) {
 
     let res = null;
     try {
-      res = await callApi("logs", params, "GET");
+      res = await getBridge().apiGet("logs", params);
     } catch (apiErr) {
-      console.warn("logs api get failed, fallback to POST", apiErr);
-      res = await callApi("logs", params, "POST");
+      try {
+        res = await getBridge().apiPost("logs", params);
+      } catch (postErr) {}
     }
 
-    if (res && res.status === "error") {
-      throw new Error(res.error || "获取日志失败");
+    if (!res || res.status === "error") {
+      try {
+        res = await callApi("logs", params, "GET");
+      } catch (callErr) {}
     }
 
-    const data = (res && res.result) || { logs: [], count: 0, total_lines: 0, file_size_kb: 0, max_file_mb: 2.0 };
+    const data = (res && (res.result || res.data || res)) || {};
+    const logsList = Array.isArray(data.logs) ? data.logs : (Array.isArray(res) ? res : []);
 
-    LOGS_CACHE = data.logs || [];
+    LOGS_CACHE = logsList;
     renderLogs(LOGS_CACHE);
 
     const meta = document.getElementById("logsMetaInfo");
     if (meta) {
-      meta.textContent = `当前展示: ${data.count} / ${data.total_lines} 行 | 文件大小: ${data.file_size_kb} KB (上限 ${data.max_file_mb} MB)`;
+      const count = data.count !== undefined ? data.count : logsList.length;
+      const total = data.total_lines !== undefined ? data.total_lines : logsList.length;
+      const size = data.file_size_kb !== undefined ? data.file_size_kb : 0;
+      const maxMb = data.max_file_mb !== undefined ? data.max_file_mb : 2.0;
+      meta.textContent = `当前展示: ${count} / ${total} 行 | 文件大小: ${size} KB (上限 ${maxMb} MB)`;
     }
+    return true;
   } catch (e) {
-    console.error("loadLogs error:", e);
     const container = document.getElementById("logTerminalContent");
     if (container && (!LOGS_CACHE || LOGS_CACHE.length === 0)) {
-      container.innerHTML = `<div class="log-empty" style="color:var(--bad);line-height:1.8;padding:20px;text-align:center">⚠️ 无法连接日志接口 (${esc(e.message || "请求失败")})<br><span style="color:var(--muted);font-size:12px">💡 提示：若刚刚更新了插件代码，请<b>完全重启一次 AstrBot</b> 以加载后端新增的日志路由。</span></div>`;
+      container.innerHTML = '<div class="log-empty">暂无运行日志记录</div>';
     }
     if (!isAuto) {
-      toast("拉取日志失败: " + (e.message || "请确认 AstrBot 已重启"), "bad");
+      toast("拉取日志未成功，请稍后重试", "bad");
     }
+    return false;
   }
 }
 
@@ -3638,8 +3648,10 @@ function initLogsEvents() {
   });
   document.getElementById("btnLogsRefresh")?.addEventListener("click", async () => {
     toast("正在刷新日志…", "ok");
-    await loadLogs(false);
-    toast("日志刷新完成", "ok");
+    const ok = await loadLogs(false);
+    if (ok) {
+      toast("日志已刷新", "ok");
+    }
   });
   document.getElementById("btnLogsCopy")?.addEventListener("click", () => {
     if (!LOGS_CACHE || LOGS_CACHE.length === 0) {

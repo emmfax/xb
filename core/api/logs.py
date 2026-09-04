@@ -33,7 +33,12 @@ async def handle_logs_get(request=None):
         data = logger.get_logs(limit=limit, level=level, keyword=keyword)
         return json_response({
             "status": "ok",
-            "result": data
+            "result": data,
+            "logs": data.get("logs", []),
+            "count": data.get("count", 0),
+            "total_lines": data.get("total_lines", 0),
+            "file_size_kb": data.get("file_size_kb", 0),
+            "max_file_mb": data.get("max_file_mb", 2.0),
         })
     except Exception as e:
         return _err(f"获取日志失败: {e}", 500)
