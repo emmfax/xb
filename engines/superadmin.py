@@ -34,6 +34,41 @@ def _cfg(key, default=""):
     return ST.cfg("超管配置", key, default)
 
 
+
+def _target_name(gid, t):
+    t_str = str(t)
+    try:
+        from . import slave as S
+        if hasattr(S, "uname"):
+            try:
+                n = S.uname(S.U(S.ST, t_str), t_str)
+                if n and n != t_str:
+                    return n
+            except Exception:
+                pass
+        if hasattr(S, "NOTE_NAMES"):
+            n = S.NOTE_NAMES.get(t_str)
+            if n:
+                return n
+    except Exception:
+        pass
+    try:
+        g = ST.group(gid)
+        if g and t_str in g.users():
+            n = g[t_str].get("name")
+            if n:
+                return n
+    except Exception:
+        pass
+    try:
+        a = ST.acct(gid, t_str)
+        n = a.get("name")
+        if n:
+            return n
+    except Exception:
+        pass
+    return t_str
+
 def _name(qq):
     try:
         from . import slave as S
@@ -157,22 +192,24 @@ def _parse_target_amount(arg):
 
 
 def cmd_deduct(gid, qq, arg):
-    """扣钱: 超管扣除指定用户指定金额，支持 @QQ"""
+    """扣钱: 超管扣除指定用户指定金额，显示群昵称"""
     t, amt = _parse_target_amount(arg)
     if not t or amt is None:
         return "格式：扣钱 @QQ 金额（正整数）"
     cur = _sum_money(gid, t)
     nv = ST.coins_add(gid, t, -amt)
-    return f"已扣除 @{t} {amt}{ST.coin_name()}（{cur}→{nv}）"
+    t_name = _target_name(gid, t)
+    return f"已扣除【{t_name}】{amt}{ST.coin_name()}（{cur}→{nv}）"
 
 
 def cmd_recharge(gid, qq, arg):
-    """充钱: 超管给指定用户充值指定金额，支持 @QQ"""
+    """充钱: 超管给指定用户充值指定金额，显示群昵称"""
     t, amt = _parse_target_amount(arg)
     if not t or amt is None:
         return "格式：充钱 @QQ 金额（正整数）"
     nv = ST.coins_add(gid, t, amt)
-    return f"已为 @{t} 充值 {amt}{ST.coin_name()}（当前 {nv}）"
+    t_name = _target_name(gid, t)
+    return f"已为【{t_name}】充值 {amt}{ST.coin_name()}（当前 {nv}）"
 
 
 def cmd_force_take(gid, qq, arg):
@@ -185,7 +222,8 @@ def cmd_force_take(gid, qq, arg):
     a.set("deposit", str(cur - take))
     ST.acct_save(gid, t)
     ST.coins_add(gid, qq, take)
-    return f"已强制取款 @{t} {take}{ST.coin_name()}（存入自己账户）"
+    t_name = _target_name(gid, t)
+    return f"已强制取款【{t_name}】{take}{ST.coin_name()}（存入自己账户）"
 
 
 def _clear_money(gid, t):

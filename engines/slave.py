@@ -75,6 +75,15 @@ def _resolve_persistent_data_dir():
                         _sh.copy2(src_f, dst_f)
                     except Exception:
                         pass
+            # 自动同步内置武器图库至持久化目录
+            src_gacha = _os.path.join(_BASE, "data", "gacha_img")
+            dst_gacha = _os.path.join(persistent_root, "gacha_img")
+            if _os.path.isdir(src_gacha):
+                try:
+                    import shutil as _sh
+                    _sh.copytree(src_gacha, dst_gacha, dirs_exist_ok=True)
+                except Exception:
+                    pass
             return persistent_root
     except Exception:
         pass
@@ -1063,11 +1072,14 @@ def _gacha_pool(rar):
     now = _time.time()
     hit = _GACHA_CACHE.get(rar)
     ts = _GACHA_CACHE_TS.get(rar, 0)
-    if hit is not None and now - ts < _GACHA_TTL:
+    if hit is not None and now - ts < _GACHA_TTL and len(hit) > 0:
         return hit
+    # 优先使用持久化数据目录，若无则回退至插件内置图库
     dd = _os.path.join(DATA_DIR, "gacha_img", rar)
+    if not _os.path.isdir(dd) or not _os.listdir(dd):
+        dd = _os.path.join(_BASE, "data", "gacha_img", rar)
     try:
-        lst = [_os.path.join(dd, f) for f in sorted(_os.listdir(dd)) if f.endswith(".png")]
+        lst = [_os.path.join(dd, f) for f in sorted(_os.listdir(dd)) if f.lower().endswith((".png", ".jpg", ".jpeg", ".gif", ".webp"))]
     except Exception:
         lst = []
     _GACHA_CACHE[rar] = lst

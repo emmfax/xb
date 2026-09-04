@@ -42,9 +42,9 @@ def _build_chain(reply):
         f = attrs.get("file", "")
         f_dec = urllib.parse.unquote(f)
         if f_dec.startswith("file:///"):
-            p = f_dec[len("file:///")] if len(f_dec) > 8 and f_dec[9:10] == ":" else f_dec[len("file:///")-1:]
-            if not os.path.isfile(p) and os.path.isfile(f_dec[len("file:///"):]):
-                p = f_dec[len("file:///"):]
+            p = f_dec[8:]
+            if len(p) > 3 and p[0] == "/" and p[2] == ":":
+                p = p[1:]
             imgs.append(p)
         elif f_dec.startswith("file://"):
             p = f_dec[len("file://"):]
