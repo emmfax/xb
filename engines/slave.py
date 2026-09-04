@@ -88,6 +88,18 @@ def cfgf(sec, key, default=0.0):
         return float(default)
 
 
+def _safe_int(v, default=0):
+    try:
+        if v is None:
+            return default
+        s = str(v).strip()
+        if not s:
+            return default
+        return int(float(s))
+    except Exception:
+        return default
+
+
 def log(msg):
     ts = _time.strftime("%H:%M:%S")
     line = f"[{ts}] [奴隶买卖] {msg}"
@@ -396,39 +408,61 @@ def cmd_menu():
 
 
 def cmd_myinfo(gid, qq, st):
-    if BOT_UIN and str(qq) == str(BOT_UIN):
-        return T.BOT_NO_JOIN
-    u = U(st, qq)
-    coins = coins_get(gid, qq)
-    price = int(uget(u, "price") or 0)
-    owner = uget(u, "owner")
-    prot = protected_until(u)
-    if prot and prot > _time.time():
-        ptxt = f"🛡️{int((prot-_time.time())/60)}分"
-    else:
-        ptxt = T.NO_PROTECT
-    sign_total, sign_streak = _sign_info(gid, qq, st)
-    wexp = int(uget(u, "weapon_exp", "0") or 0)
-    slaves = slaves_of(st, qq)
-    cap = int(uget(u, "slave_slots", str(cfgi("设置", "奴隶个数", 2))) or 2)
-    sl_txt = ", ".join(uname(st, s) for s in slaves) or T.NO_SLAVE
-    w_list = weapons_of(u)
-    t_list = treasures_of(u)
-    acct = store.acct(gid, qq)
-    dep = acct.int("deposit")
-    tili = acct.int("stamina")
-    meili = acct.int("charm")
-    jq = acct.int("lottery_tickets")
-    lines = [
-        f"📋【{uname(st,qq)}】的档案",
-        f"💰资产：{coins}{coin_name()}｜🏦存款：{dep}｜💎身价：{price}",
-        f"🔋体力：{tili}｜💄魅力：{meili}｜🎫奖券：{jq}｜📖经验：{wexp}",
-        f"👑主人：{uname(st, owner) if owner else T.NO_OWNER}｜{ptxt}｜📅总签{sign_total}·连签{sign_streak}天",
-        f"⚔️武器：{', '.join(f'{w}★{star_of(u,w)}' for w in w_list) if w_list else T.NO_WEAPON}",
-        f"🎁宝物：{', '.join(t_list) if t_list else T.NO_TREASURE}",
-        f"👥奴隶({len(slaves)}/{cap})：{sl_txt}",
-    ]
-    return "\r\n".join(lines)
+    try:
+        if BOT_UIN and str(qq) == str(BOT_UIN):
+            return T.BOT_NO_JOIN
+        u = U(st, qq)
+        coins = coins_get(gid, qq)
+        price = _safe_int(uget(u, "price"), 500)
+        owner = uget(u, "owner")
+        prot = protected_until(u)
+        if prot and prot > _time.time():
+            ptxt = f"🛡️{int((prot-_time.time())/60)}分"
+        else:
+            ptxt = T.NO_PROTECT
+        sign_total, sign_streak = _sign_info(gid, qq, st)
+        wexp = _safe_int(uget(u, "weapon_exp"), 0)
+        slaves = slaves_of(st, qq)
+        cap = _safe_int(uget(u, "slave_slots"), cfgi("设置", "奴隶个数", 2))
+        if cap <= 0:
+            cap = 2
+        sl_txt = ", ".join(uname(st, s) for s in slaves) or T.NO_SLAVE
+        w_list = weapons_of(u)
+        t_list = treasures_of(u)
+        acct = store.acct(gid, qq)
+        dep = acct.int("deposit")
+        tili = acct.int("stamina")
+        meili = acct.int("charm")
+        jq = acct.int("lottery_tickets")
+        lines = [
+            f"📋【{uname(st,qq)}】的档案",
+            f"💰资产：{coins}{coin_name()}｜🏦存款：{dep}｜💎身价：{price}",
+            f"🔋体力：{tili}｜💄魅力：{meili}｜🎫奖券：{jq}｜📖经验：{wexp}",
+            f"👑主人：{uname(st, owner) if owner else T.NO_OWNER}｜{ptxt}｜📅总签{sign_total}·连签{sign_streak}天",
+            f"⚔️武器：{', '.join(f'{w}★{star_of(u,w)}' for w in w_list) if w_list else T.NO_WEAPON}",
+            f"🎁宝物：{', '.join(t_list) if t_list else T.NO_TREASURE}",
+            f"👥奴隶({len(slaves)}/{cap})：{sl_txt}",
+        ]
+        return "\r\n".join(lines)
+    except Exception as e:
+        # 兜底防御：发生未预料异常时依然返回完整版档案格式，杜绝退化为简版
+        try:
+            name = uname(st, qq) if 'st' in locals() else str(qq)
+            coins = store.coins_get(gid, qq)
+            acct = store.acct(gid, qq)
+            return ("📋【%s】的档案\r\n"
+                    "💰资产：%d%s｜🏦存款：%d｜💎身价：500\r\n"
+                    "🔋体力：%d｜💄魅力：%d｜🎫奖券：%d｜📖经验：0\r\n"
+                    "👑主人：木有主人｜无人保护｜📅总签%d·连签%d天\r\n"
+                    "⚔️武器：木有武器\r\n"
+                    "🎁宝物：木有宝物\r\n"
+                    "👥奴隶(0/2)：木有奴隶" % (
+                        name, coins, store.coin_name(), acct.int("deposit"),
+                        acct.int("stamina"), acct.int("charm"), acct.int("lottery_tickets"),
+                        acct.int("sign_count"), acct.int("consecutive_days")
+                    ))
+        except Exception:
+            return "个人档案读取异常，请重试。"
 
 
 def coin_name():
@@ -441,45 +475,48 @@ def _ymd(dtobj):
 
 def _sign_info(gid, qq, st):
     """总签/连签: 完全本地(不依赖drea) —— 总签与连签双向打通 sign 与 slave 存储"""
-    u = U(st, qq)
-    acct = ST.acct(gid, qq)
-    today = _dt.date.today()
-    today_s = _ymd(today)
-    
-    # 优先从 Acct(sign 引擎) 和 Group(slave 引擎) 取最大值，兼容新旧库
-    total = max(
-        int(uget(u, "total_sign_days", "0") or 0),
-        acct.int("sign_count"),
-        acct.int("total_sign_days")
-    )
-    streak = max(
-        int(uget(u, "shadow_streak", "0") or 0),
-        acct.int("consecutive_days"),
-        int(uget(u, "consecutive_days", "0") or 0)
-    )
-    seen = uget(u, "shadow_date") or acct.get("last_sign_date")
-    
-    # 检查是否今日已签到
-    is_signed_today = (
-        uget(u, "last_sign") == today.isoformat() or
-        acct.get("sign_date") == today.isoformat() or
-        acct.get("last_sign_date") == today.isoformat()
-    )
-    
-    if is_signed_today:
-        if seen != today_s and seen != today.isoformat():
-            yest_s = _ymd(today - _dt.timedelta(days=1))
-            yest_iso = (today - _dt.timedelta(days=1)).isoformat()
-            streak = (streak + 1) if (seen == yest_s or seen == yest_iso) else max(streak, 1)
-            uset(u, "shadow_streak", str(streak))
-            uset(u, "shadow_date", today_s)
-            acct.set("consecutive_days", str(streak))
-            acct.set("last_sign_date", today.isoformat())
-            ST.acct_save(gid, qq)
-        return total, max(streak, 1)
-    
-    # 非今日签到
-    return total, streak
+    try:
+        u = U(st, qq)
+        acct = ST.acct(gid, qq)
+        today = _dt.date.today()
+        today_s = _ymd(today)
+        
+        # 优先从 Acct(sign 引擎) 和 Group(slave 引擎) 取最大值，兼容新旧库
+        total = max(
+            _safe_int(uget(u, "total_sign_days", "0")),
+            acct.int("sign_count"),
+            acct.int("total_sign_days")
+        )
+        streak = max(
+            _safe_int(uget(u, "shadow_streak", "0")),
+            acct.int("consecutive_days"),
+            _safe_int(uget(u, "consecutive_days", "0"))
+        )
+        seen = uget(u, "shadow_date") or acct.get("last_sign_date")
+        
+        # 检查是否今日已签到
+        is_signed_today = (
+            uget(u, "last_sign") == today.isoformat() or
+            acct.get("sign_date") == today.isoformat() or
+            acct.get("last_sign_date") == today.isoformat()
+        )
+        
+        if is_signed_today:
+            if seen != today_s and seen != today.isoformat():
+                yest_s = _ymd(today - _dt.timedelta(days=1))
+                yest_iso = (today - _dt.timedelta(days=1)).isoformat()
+                streak = (streak + 1) if (seen == yest_s or seen == yest_iso) else max(streak, 1)
+                uset(u, "shadow_streak", str(streak))
+                uset(u, "shadow_date", today_s)
+                acct.set("consecutive_days", str(streak))
+                acct.set("last_sign_date", today.isoformat())
+                ST.acct_save(gid, qq)
+            return total, max(streak, 1)
+        
+        # 非今日签到
+        return total, streak
+    except Exception:
+        return 0, 0
 
 
 def cmd_query(gid, qq, target, st):
@@ -487,8 +524,7 @@ def cmd_query(gid, qq, target, st):
         return T.QUERY_WHO
     if BOT_UIN and str(target) == str(BOT_UIN):
         return T.BOT_NO_JOIN
-    if not st.has_section(str(target)):
-        return "Ta还没加入本群的游戏哦~"
+    # 只要 target 存在即自动建档并展示，不再拦截“还没加入游戏”
     return cmd_myinfo(gid, target, st)
 
 
@@ -1570,16 +1606,32 @@ def _route_locked(gid, qq, raw):
     target, text = store.parse_at(raw)
     mark_known(gid, qq)
 
-    # @名字 兜底: 从本群已有档案(名片/昵称)反查 qq
+    # @名字 兜底: 从 NOTE_NAMES / store._AT_NAMES / 本群已有档案(名片/昵称)反查 qq
     if not target:
-        m = _re.search(r"@\s*([^@\s，,]+)", text)
+        m = _re.search(r"@\s*([^@\s，,\r\n]+)", text)
         if m:
             nm = m.group(1).strip()
-            for _uid in st.users():
-                if uget(U(st, _uid), "name") == nm:
-                    target = str(_uid)
+            # 1. 查实时 NOTE_NAMES
+            if NOTE_NAMES:
+                for _q, _n in NOTE_NAMES.items():
+                    if _n and (_n == nm or nm == _n.strip() or nm in _n):
+                        target = str(_q)
+                        text = text.replace(m.group(0), "", 1).strip()
+                        break
+            # 2. 查 store._AT_NAMES
+            if not target and hasattr(store, "_AT_NAMES") and store._AT_NAMES:
+                _found_q = store._AT_NAMES.get(nm)
+                if _found_q:
+                    target = str(_found_q)
                     text = text.replace(m.group(0), "", 1).strip()
-                    break
+            # 3. 查群档案
+            if not target:
+                for _uid in st.users():
+                    _unm = uget(U(st, _uid), "name")
+                    if _unm and (_unm == nm or nm == _unm.strip() or nm in _unm):
+                        target = str(_uid)
+                        text = text.replace(m.group(0), "", 1).strip()
+                        break
             if not target and store._AT_NAMES:
                 store.register_names(NOTE_NAMES)  # 确保索引最新
         # 兼容纯 QQ 号（无 @）的写法：文案仅 @QQ，但解析支持 QQ 号
@@ -1628,17 +1680,33 @@ def _route_locked(gid, qq, raw):
             return cmd_query(gid, qq, t, st)
         return cmd_myinfo(gid, qq, st)
     if text.startswith("查询"):
-        # 查询@QQ  -> 查他人我的信息，兼容已提取的 target
+        # 查询@QQ / 查询 @名字 / 查询 QQ / 查询 名字 -> 查他人我的信息，兼容已提取的 target
         t = target
         if not t:
             t2, _ = store.parse_at(text)
             if t2:
                 t = t2
             else:
-                import re as _re3
-                m = _re3.search(r"(\d{5,12})", text)
-                if m:
-                    t = m.group(1)
+                rest = text[len("查询"):].strip()
+                if rest.startswith("@"):
+                    rest = rest[1:].strip()
+                if rest:
+                    m_num = _re.search(r"^(\d{5,12})$", rest)
+                    if m_num:
+                        t = m_num.group(1)
+                    else:
+                        for _q, _n in NOTE_NAMES.items():
+                            if _n and (_n == rest or rest == _n.strip() or rest in _n):
+                                t = str(_q)
+                                break
+                        if not t and hasattr(store, "_AT_NAMES") and store._AT_NAMES:
+                            t = store._AT_NAMES.get(rest)
+                        if not t:
+                            for _uid in st.users():
+                                _unm = uget(U(st, _uid), "name")
+                                if _unm and (_unm == rest or rest == _unm.strip() or rest in _unm):
+                                    t = str(_uid)
+                                    break
         if t:
             return cmd_query(gid, qq, t, st)
         return "格式：查询 @QQ"

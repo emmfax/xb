@@ -143,17 +143,34 @@ def days_cn(chain):
 
 
 def cmd_personal(gid, qq):
-    """个人信息: 含财富/体力/魅力/奖券/签到次数"""
+    """个人信息: 优先委派 slave 引擎返回全量档案；兜底返回美化版个人档案"""
+    try:
+        from . import slave as _sl
+        return _sl.cmd_myinfo(gid, qq, _sl.state(gid))
+    except Exception:
+        pass
+    try:
+        import slave as _sl2
+        return _sl2.cmd_myinfo(gid, qq, _sl2.state(gid))
+    except Exception:
+        pass
     a = _acct(gid, qq)
     money = ST.coins_get(gid, qq)
     dep = a.int("deposit")
-    lines = ["您的账户信息如下：",
-             f"个人财富：{money + dep}",
-             f"签到次数：{a.get('sign_count', '0')}",
-             f"剩余体力：{a.get('stamina', '0')}",
-             f"魅力指数：{a.get('charm', '0')}",
-             f"奖券数量：{a.get('lottery_tickets', '0')}",
-             f"存款金额：{dep}"]
+    tili = a.int("stamina")
+    meili = a.int("charm")
+    jq = a.int("lottery_tickets")
+    sign_c = a.int("sign_count")
+    coin = ST.coin_name()
+    lines = [
+        f"📋【{qq}】的档案",
+        f"💰资产：{money}{coin}｜🏦存款：{dep}｜💎身价：500",
+        f"🔋体力：{tili}｜💄魅力：{meili}｜🎫奖券：{jq}｜📖经验：0",
+        f"👑主人：木有主人｜无人保护｜📅总签{sign_c}·连签{a.int('consecutive_days')}天",
+        "⚔️武器：木有武器",
+        "🎁宝物：木有宝物",
+        "👥奴隶(0/2)：木有奴隶",
+    ]
     return "\r\n".join(lines)
 
 
