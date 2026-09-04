@@ -1437,7 +1437,7 @@ async function exportAllUsers() {
         count: usersList.length,
         users: usersList,
         export_at: res.export_at || Math.floor(Date.now() / 1000),
-        version: res.version || "0.68.10"
+        version: res.version || "0.68.11"
       };
       const jsonStr = JSON.stringify(payload, null, 2);
       triggerExportResult({
@@ -1574,7 +1574,7 @@ const CMD_NUMS = {
     ["祈福配置", "人品爆发概率", "人品爆发概率%", "int"], ["祈福配置", "人品爆发奖励", "人品爆发奖励", "int"]],
   "升星": [["设置", "一星武器概率", "一星概率%", "int"], ["设置", "一星武器花费", "一星花费", "int"], ["设置", "一星武器消耗同武器数量", "一星消耗同武数", "int"], ["设置", "二星武器概率", "二星概率%", "int"], ["设置", "二星武器花费", "二星花费", "int"], ["设置", "二星武器消耗同武器数量", "二星消耗", "int"]],
   "升阶": [["设置", "一阶宝物概率", "一阶概率%", "int"], ["设置", "一阶宝物花费", "一阶花费", "int"]],
-  "我要打工": [["间隔配置", "打工间隔", "打工间隔(分)", "int"], ["费用配置", "工资比例", "工资比例%", "int"], ["设置", "税率", "税率", "float"]],
+  "我要打工": [["间隔配置", "打工间隔", "打工间隔(分)", "int"], ["费用配置", "工资比例", "工资比例%", "int"]],
   "奴隶打工": [["间隔配置", "打工间隔", "打工间隔(分)", "int"], ["费用配置", "工资比例", "工资比例%", "int"]],
   "打工": [["间隔配置", "打工间隔", "打工间隔(分)", "int"]],
   "学习": [["间隔配置", "学习间隔", "学习间隔(分)", "int"], ["设置", "奇遇触发概率", "奇遇概率%", "int"]],
@@ -1665,11 +1665,6 @@ async function loadCommands() {
           return `<a class="cmd-tag ${onBg}" data-on="${cOn ? "1" : "0"}" data-cmd="${esc(c)}" data-sys="${esc(sys)}">` +
             `${cOn ? '<span style="color:var(--ok);font-size:10px">●</span>' : '<span style="color:var(--muted);font-size:10px">○</span>'} ${esc(c)}</a>`;
         }).join("");
-        // 奴隶系统块头部: 汇总税率(奴隶系统独有的成交税率)
-        const taxHtml = sys === "奴隶系统"
-          ? `<div class="cmd-wake"><label>系统税率</label>` +
-            `<input type="number" step="any" data-taxtax value="${esc(setupSec["税率"] ?? 0.1)}" style="min-width:100px">` +
-            `<small>(奴隶系统成交税率，0.1=10%)</small></div>` : "";
         return `<details class="cmd-block" data-sys="${esc(sys)}"><summary>` +
           `<span class="cmd-sys">${esc(sys)}</span>` +
           `<span class="cmd-count">${items.length} 条指令</span></summary>` +
@@ -1677,7 +1672,6 @@ async function loadCommands() {
           `<div class="cmd-wake-item"><label>启用系统</label><label class="switch"><input type="checkbox" data-syson="${esc(sys)}" ${sysChecked}><span class="slider-toggle"></span></label></div>` +
           `<div class="cmd-wake-item" style="flex:1"><label>唤醒词</label><input data-wake="${esc(sys)}" value="${esc(wake)}" placeholder="可用 | 分隔多个"></div>` +
           `</div>` +
-          taxHtml +
           `<div class="cmd-tags">${tags || '<span class="hint">（交互式/无前缀触发）</span>'}</div>` +
           `</details>`;
       })
@@ -1829,9 +1823,6 @@ async function saveCmdEditor() {
       onSec[inp.dataset.syson] = inp.checked ? "真" : "假";
     });
     if (Object.keys(onSec).length) payload["系统开关配置"] = onSec;
-    // 系统税率(奴隶系统块头部, 仅存在时收)
-    const taxInp = document.querySelector("#cmdList [data-taxtax]");
-    if (taxInp) { payload["设置"] = { 税率: parseFloat(taxInp.value) }; }
     // 系统唤醒词: 收所有块头部
     const wakeSec = {};
     document.querySelectorAll("#cmdList [data-wake]").forEach((inp) => {

@@ -74,10 +74,10 @@ def cmd_sign(gid, qq):
         hi = ST.cfgi("签到配置", cn_k + "上限", ST.cfgi("签到配置", en_k + "上限", d_hi))
         if lo > hi: lo, hi = hi, lo
         return random.randint(lo, hi)
-    base = _rng("金钱", "money", 800, 2000)
-    tili = _rng("体力", "stamina", 50, 100)
-    meili = _rng("魅力", "charm", 15, 30)
-    juan = _rng("奖券", "lottery_tickets", 3, 8)
+    base = _rng("金钱", "money", 500, 1200)
+    tili = _rng("体力", "stamina", 20, 40)
+    meili = _rng("魅力", "charm", 5, 10)
+    juan = _rng("奖券", "lottery_tickets", 1, 3)
     bonus = ST.cfgi("签到配置", "连签加成", 100)
     chain_bonus = bonus * min(chain, 30)
     total += 1
@@ -181,9 +181,9 @@ def cmd_draw(gid, qq, amount=1):
         win = must_win or (random.randint(1, 100) <= ST.cfgi("抽奖配置", "中奖率", 60))
         if win:
             pool = [
-                (ST.coin_name(), "coin", ST.cfgi("抽奖配置", "现金奖", 500)),
-                ("体力", "stamina", ST.cfgi("抽奖配置", "体力奖", 20)),
-                ("魅力", "charm", ST.cfgi("抽奖配置", "魅力奖", 20)),
+                (ST.coin_name(), "coin", ST.cfgi("抽奖配置", "现金奖", 600)),
+                ("体力", "stamina", ST.cfgi("抽奖配置", "体力奖", 10)),
+                ("魅力", "charm", ST.cfgi("抽奖配置", "魅力奖", 5)),
             ]
             name_cn, kind, val = random.choice(pool)
             if kind == "coin":
@@ -234,7 +234,7 @@ def cmd_gift(gid, qq, kind, amount):
     if amount > 999:
         return f"亲，{kind_cn}单次购买数量上限为999！"
     key = "stamina" if kind == "stamina" else "charm"
-    price = ST.cfgi("签到配置", "体力价格" if kind == "stamina" else "魅力价格", 150)
+    price = ST.cfgi("签到配置", "体力价格" if kind == "stamina" else "魅力价格", 30 if kind == "stamina" else 50)
     total = price * amount
     have = ST.coins_get(gid, qq)
     dep = ST.acct(gid, qq).int("deposit")

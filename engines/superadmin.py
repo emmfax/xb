@@ -386,39 +386,46 @@ def _maint_msg(msg):
 
 def _version():
     try:
-        import os
+        import os, re
         base = os.path.dirname(os.path.abspath(__file__))
         ver = ""
-        # 优先 metadata.yaml
-        try:
-            import yaml
-            m = yaml.safe_load(open(os.path.join(base, "..", "metadata.yaml"), encoding="utf-8"))
-            ver = str(m.get("version", "")).strip()
-        except Exception:
-            pass
-        if not ver:
+        meta = os.path.join(base, "..", "metadata.yaml")
+        if os.path.isfile(meta):
             try:
-                import re
-                t = open(os.path.join(base, "..", "main.py"), encoding="utf-8").read()
-                m2 = re.search(r'PLUGIN_VERSION\s*=\s*["\']([^"\']+)["\']', t)
-                if m2:
-                    ver = m2.group(1).strip()
+                with open(meta, "r", encoding="utf-8") as f:
+                    for line in f:
+                        if line.strip().startswith("version:"):
+                            ver = line.split(":", 1)[1].strip().strip('"').strip("'")
+                            break
             except Exception:
                 pass
         if not ver:
-            ver = "0.68.10"
+            main_py = os.path.join(base, "..", "main.py")
+            if os.path.isfile(main_py):
+                try:
+                    with open(main_py, "r", encoding="utf-8") as f:
+                        m2 = re.search(r'PLUGIN_VERSION\s*=\s*["\']([^"\']+)["\']', f.read())
+                        if m2:
+                            ver = m2.group(1).strip()
+                except Exception:
+                    pass
+        if not ver:
+            ver = "0.68.11"
         return f"小白版本：{ver}"
-    except Exception as e:
-        return f"小白版本：未知（{e}）"
+    except Exception:
+        return "小白版本：0.68.11"
 
 # ---- 统一入口（测试指令仅超管，WebUI可配但不显示于MENU，已删 个人信息） ----
-_ADMIN_CMDS = ("群列表", "应用统计", "扣钱", "充钱", "清空", "重置", "禁言", "踢人", "备份xb", "备份", "开启维护", "关闭维护", "维护信息", "小白版本", "检查更新", "小白升级", "小白更新", "测试testxb", "测试testxb1", "测试testxb2", "测试testxb3", "测试testxb4", "测试testxb5", "测试testxb6", "测试testxb7", "测试testxb8", "超管列表")
+_ADMIN_CMDS = ("群列表", "应用统计", "扣钱", "充钱", "清空", "重置", "禁言", "踢人", "备份xb", "备份", "开启维护", "关闭维护", "维护信息", "检查更新", "小白升级", "小白更新", "测试testxb", "测试testxb1", "测试testxb2", "测试testxb3", "测试testxb4", "测试testxb5", "测试testxb6", "测试testxb7", "测试testxb8", "超管列表")
 
 
 def handle(gid, qq, raw, is_admin=False):
     text = (raw or "").strip()
     if not text:
         return None
+    # 允许所有人查询版本
+    if text in ("小白版本", "版本", "xb版本", "插件版本"):
+        return _version()
     if text in ST.wake("超管系统", "超管系统"):
         if not is_admin:
             return "亲亲,你没有相关权限哦~"

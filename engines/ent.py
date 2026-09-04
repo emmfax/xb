@@ -565,6 +565,9 @@ def handle(gid, qq, raw):
         ST.recall_set(f"chain_{gid}", first)
         ST.recall_set(f"chain_start_{gid}", str(int(time.time())))
         ST.recall_set(f"chain_players_{gid}", "")
+        ST.recall_set(f"chain_used_{gid}", first)
+        ST.recall_set(f"chain_last_qq_{gid}", "")
+        ST.recall_set(f"chain_last_time_{gid}", "0")
         _set_active_game(gid, "接龙")
         return (f"🧩 接龙开始！机器人先出词：【{first}】\r\n"
                 f"请用尾字「{first[-1]}」接龙（词语2-6字）！\r\n"
@@ -589,6 +592,9 @@ def handle(gid, qq, raw):
         ST.recall_set(f"chain_{gid}", "")
         ST.recall_set(f"chain_start_{gid}", "")
         ST.recall_set(f"chain_players_{gid}", "")
+        ST.recall_set(f"chain_used_{gid}", "")
+        ST.recall_set(f"chain_last_qq_{gid}", "")
+        ST.recall_set(f"chain_last_time_{gid}", "")
         _clear_active_game(gid)
         return "接龙结束！"
     if text.startswith("开始急转弯"):
@@ -993,11 +999,31 @@ def _play(gid, qq, text):
             return None
         if text and 2 <= len(text) <= 6 and not text.startswith(("开始", "加入", "退出")):
             if last:
+                if text == last:
+                    return f"不能重复接上一个完全相同的词语「{last}」哦，请换一个词~"
                 if text[0] != last[-1]:
                     return f"接不上哦！上一个词的尾字是「{last[-1]}」，请用这个字开头~"
+            used_str = S.recall_get(f"chain_used_{gid}", "")
+            used_list = [w for w in used_str.split(",") if w]
+            if text in used_list:
+                return f"词语「{text}」在本轮接龙中已经使用过了，请换一个新词吧~"
+
+            now = int(time.time())
+            last_qq = S.recall_get(f"chain_last_qq_{gid}", "")
+            last_time = int(S.recall_get(f"chain_last_time_{gid}", "0") or 0)
+            if last_qq == str(qq) and now - last_time < 2:
+                return "接得太快啦，深呼吸一下再接吧~"
+
+            used_list.append(text)
+            if len(used_list) > 100:
+                used_list = used_list[-100:]
+            S.recall_set(f"chain_used_{gid}", ",".join(used_list))
             S.recall_set(f"chain_{gid}", text)
-            S.recall_set(f"chain_start_{gid}", str(int(time.time())))
-            coin = S.cfgi("娱乐配置", "接龙奖励金币", 18)
+            S.recall_set(f"chain_start_{gid}", str(now))
+            S.recall_set(f"chain_last_qq_{gid}", str(qq))
+            S.recall_set(f"chain_last_time_{gid}", str(now))
+
+            coin = S.cfgi("娱乐配置", "接龙奖励金币", 15)
             meili = S.cfgi("娱乐配置", "接龙奖励魅力", 0)
             if coin or meili:
                 _reward(gid, qq, coin, meili)

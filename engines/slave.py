@@ -546,10 +546,8 @@ def cmd_buy_slave(gid, qq, target, st):
     if last_trade and _time.time() - last_trade < iv * 60:
         left = int(iv - (_time.time() - last_trade) / 60) + 1
         return T.BUY_JUST_TRADED.format(min=left)
-    tax = cfgf("设置", "税率", 0.1)
     coins_add(gid, qq, -price)
-    tax_amount = int(price * tax)
-    profit = price - tax_amount
+    profit = price
     if prev_owner:
         coins_add(gid, prev_owner, profit)
         orig = int(uget(tgt, "purchase_price") or price)
@@ -574,7 +572,6 @@ def cmd_buy_slave(gid, qq, target, st):
         lines += [
             T.BUY_PREV_OWNER.format(prev=pon),
             T.BUY_PREV_COST.format(orig=orig),
-            T.BUY_TAX.format(tax=tax_amount),
             T.BUY_PREV_PROFIT.format(profit=profit),
         ]
     return head + "\r\n" + "\r\n".join(lines)
@@ -959,7 +956,6 @@ def cmd_work_collect(gid, qq, st):
         return T.WORK_WAIT.format(min=int(left / 60) + 1)
 
     ratio = cfgi("费用配置", "工资比例", 50)
-    tax = cfgf("设置", "税率", 0.1)
     total = int(uget(u, "work_wage") or 0)
     lines = [T.WORK_COLLECT.format(total=total)]
     wage_paid = 0
@@ -974,13 +970,12 @@ def cmd_work_collect(gid, qq, st):
         wage_paid += got
         lines.append(f"[{uname(st,s)}]{T.WORK_GOT_WAGE.format(wage=got)}")
         uset(su, "_work_wage", "")
-    master_net = int(total * (1 - tax)) - wage_paid
+    master_net = total - wage_paid
     if master_net > 0:
         coins_add(gid, qq, master_net)
     uset(u, "work_status", "")
     uset(u, "work_time", "")
     lines.append(T.WORK_WAGE_TOTAL.format(wage=wage_paid))
-    lines.append(T.WORK_TAX_TOTAL.format(tax=int(total * tax)))
     lines.append(T.WORK_MASTER_GET.format(got=max(0, master_net)))
     return "\r\n".join(lines)
 

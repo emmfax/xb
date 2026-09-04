@@ -2,11 +2,6 @@
   "设置": {
     "type": "object",
     "items": {
-      "税率": {
-        "type": "float",
-        "description": "交易税率(0.1=10%)",
-        "default": 0.02
-      },
       "货币名称": {
         "type": "string",
         "description": "货币显示名称",

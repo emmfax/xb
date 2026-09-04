@@ -60,33 +60,40 @@ def _revive(gid, qq):
 
 
 MENU = (
-    "⚔️ 冒险系统\r\n"
+    "⚔️ 冒险系统（共 14 大秘境）\r\n"
     "━━━━━━━━━━━━━━\r\n"
-    "🗺️ 迷失海岛 死亡医院 灵异舞会 恶魔岛\r\n"
-    "🌫️ 里世界 恐怖旅程 雪夜之旅 幽灵谜境\r\n"
-    "🌙 入夜暴走\r\n"
-    "📖 冒险 地图　🎲 选择 序号\r\n"
-    "📋 当前冒险　🧭 结束冒险\r\n"
-    "🏆 复活币排行\r\n"
+    "🗺️【秘境探索】\r\n"
+    "　• 迷失海岛　• 死亡医院　• 灵异舞会　• 恶魔岛\r\n"
+    "　• 里世界　　• 恐怖旅程　• 雪夜之旅　• 幽灵谜境\r\n"
+    "　• 入夜暴走　• 海底神殿　• 赛博迷城　• 幽冥古刹\r\n"
+    "　• 沙海龙窟　• 时间回廊\r\n"
     "━━━━━━━━━━━━━━\r\n"
-    "💡 发送【冒险 地图】开始冒险，消耗体力+金币"
+    "📖【冒险指令】\r\n"
+    "　• 开启冒险：冒险 地图名（如：冒险 海底神殿）\r\n"
+    "　• 推进剧情：直接发送数字 1 / 2 / 3 或【选择 1】\r\n"
+    "　• 进度查询：当前冒险\r\n"
+    "　• 提前撤退：结束冒险（需消耗复活币×1）\r\n"
+    "　• 荣誉榜单：复活币排行\r\n"
+    "━━━━━━━━━━━━━━\r\n"
+    "💡 每次探险消耗 10 体力 + 金币，生死抉择，奇遇由你书写！"
 )
 
 
 def _build_start_narrative(mapname):
     intro, scene = MAPS[mapname]
-    choices = CHOICE_LABELS.get(mapname, ["【选择 1】", "【选择 2】", "【选择 3】"])
-    # 组合成长叙事 + 选项
-    choice_block = "\r\n".join(f"{c}" for c in choices)
+    choices = CHOICE_LABELS.get(mapname, ["[1] 探索前路", "[2] 谨慎观察", "[3] 另寻捷径"])
+    choice_block = "\r\n".join(choices)
     return (
-        f"【{mapname}·启程】\r\n"
+        f"🌌【{mapname} · 启程探险】\r\n"
+        f"━━━━━━━━━━━━━━\r\n"
         f"{intro}\r\n"
-        f"——\r\n{scene}\r\n"
+        f"——\r\n"
+        f"{scene}\r\n"
         f"━━━━━━━━━━━━━━\r\n"
-        f"抉择时刻：\r\n{choice_block}\r\n"
+        f"🎯【抉择时刻】（直接回复数字 1 / 2 / 3 作答）：\r\n"
+        f"{choice_block}\r\n"
         f"━━━━━━━━━━━━━━\r\n"
-        f"请作出您的选择！指令为【选择 序号】（如 选择 1）\r\n"
-        f"💡 提示：不同选择将触发不同随机事件，影响奖励与命运"
+        f"💡 提示：直接发送数字【1】/【2】/【3】推进剧情，抉择将影响奇遇走向！"
     )
 
 
@@ -97,7 +104,7 @@ def cmd_start(gid, qq, mapname):
     if mapname not in MAPS:
         return "亲，不存在该冒险地图，发送【冒险系统】查看地图吧！"
     a = _acct(gid, qq)
-    cs = _cfgi("冒险消耗体力", 5)
+    cs = _cfgi("冒险消耗体力", 10)
     if a.int("stamina") < cs:
         return "亲，您的体力不足，无法进行冒险！"
     cost = _cfgi("冒险需要金钱", 1000)
@@ -193,20 +200,25 @@ def cmd_choose(gid, qq, n):
         ST.coins_add(gid, qq, reward)
         _save(gid, qq, {})
         return (
-            f"【{m}·终章】你历经 {max_round} 轮生死抉择，终于走出{ m }的阴霾！\r\n"
+            f"🏆【{m} · 史诗通关】\r\n"
+            f"━━━━━━━━━━━━━━\r\n"
+            f"你历经 {max_round} 轮惊心动魄的生死抉择，终于化险为夷，凯旋归来！\r\n"
             f"{outcome}\r\n"
             f"━━━━━━━━━━━━━━\r\n"
-            f"🏆 通关奖励：{reward}{ST.coin_name()}，当前复活币×{rv}\r\n"
-            f"冒险已结束，发送【冒险 地图】开启新征程！"
+            f"🎁 最终通关奖励：+{reward} {ST.coin_name()}，当前持有复活币 × {rv}\r\n"
+            f"✨ 本轮冒险已圆满落幕，随时发送【冒险 地图】开启新征程！"
         )
-    # 续程：给出下一轮的抉择提示（保持原序更易理解，避免玩家困惑）
-    next_choices = CHOICE_LABELS.get(m, ["【选择 1】", "【选择 2】", "【选择 3】"])
+    # 续程：给出下一轮的抉择提示（纯数字选项）
+    next_choices = CHOICE_LABELS.get(m, ["[1] 探索前路", "[2] 谨慎观察", "[3] 另寻捷径"])
     return (
-        f"【{m}·第{adv['round']}轮/共{max_round}轮】\r\n"
+        f"🧭【{m} · 第 {adv['round']} / {max_round} 轮】\r\n"
+        f"━━━━━━━━━━━━━━\r\n"
         f"{outcome}\r\n"
-        "━━━━━━━━━━━━━━\r\n"
-        "下一抉择：\r\n" + "\r\n".join(next_choices) + "\r\n"
-        "继续发送【选择 序号】推进，或【结束冒险】消耗复活币提前结束！"
+        f"━━━━━━━━━━━━━━\r\n"
+        f"🎯【前路抉择】（直接回复数字 1 / 2 / 3 推进）：\r\n"
+        + "\r\n".join(next_choices) + "\r\n"
+        f"━━━━━━━━━━━━━━\r\n"
+        f"💡 直接发送 1 / 2 / 3 继续推进，或发送【结束冒险】消耗复活币提前撤退！"
     )
 
 
@@ -273,4 +285,10 @@ def handle(gid, qq, raw):
         return cmd_start(gid, qq, text[2:].strip() if text.startswith("冒险") else text[9:].strip())
     if text.startswith("选择"):
         return cmd_choose(gid, qq, text[2:].strip())
+    # 纯数字直接作答：若玩家当前正在冒险中，直接发送 1、2、3 等即可作答推进
+    if text in ("1", "2", "3", "[1]", "[2]", "[3]", "1.", "2.", "3.", "一", "二", "三"):
+        adv = _cur(gid, qq)
+        if adv.get("map"):
+            digit_map = {"1": 1, "2": 2, "3": 3, "[1]": 1, "[2]": 2, "[3]": 3, "1.": 1, "2.": 2, "3.": 3, "一": 1, "二": 2, "三": 3}
+            return cmd_choose(gid, qq, str(digit_map.get(text, 1)))
     return None
