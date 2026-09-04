@@ -388,7 +388,7 @@ def _version():
             except Exception:
                 pass
         if not ver:
-            ver = "0.68.7"
+            ver = "0.68.8"
         return f"小白版本：{ver}"
     except Exception as e:
         return f"小白版本：未知（{e}）"

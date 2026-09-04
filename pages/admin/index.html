@@ -1492,13 +1492,85 @@
       }
     }
 
+    /* 插件运行日志终端样式 */
+    .log-terminal {
+      background: #0d1117;
+      border: 1px solid rgba(255, 255, 255, 0.12);
+      border-radius: 12px;
+      padding: 14px 16px;
+      font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+      font-size: 12px;
+      line-height: 1.65;
+      height: 60vh;
+      min-height: 380px;
+      overflow-y: auto;
+      color: #c9d1d9;
+      box-shadow: inset 0 2px 6px rgba(0, 0, 0, 0.35);
+      scroll-behavior: smooth;
+    }
+    .log-terminal-inner {
+      white-space: pre-wrap;
+      word-break: break-all;
+    }
+    .log-line {
+      display: flex;
+      gap: 8px;
+      padding: 2px 4px;
+      border-radius: 4px;
+      transition: background 0.15s ease;
+    }
+    .log-line:hover {
+      background: rgba(255, 255, 255, 0.05);
+    }
+    .log-ts {
+      color: #8b949e;
+      flex-shrink: 0;
+      user-select: none;
+    }
+    .log-badge {
+      display: inline-block;
+      font-size: 10px;
+      font-weight: 700;
+      padding: 0 6px;
+      border-radius: 4px;
+      flex-shrink: 0;
+      line-height: 1.6;
+    }
+    .log-badge.info {
+      background: rgba(56, 189, 248, 0.15);
+      color: #38bdf8;
+      border: 1px solid rgba(56, 189, 248, 0.3);
+    }
+    .log-badge.warn {
+      background: rgba(251, 191, 36, 0.15);
+      color: #fbbf24;
+      border: 1px solid rgba(251, 191, 36, 0.3);
+    }
+    .log-badge.error {
+      background: rgba(248, 113, 113, 0.2);
+      color: #f87171;
+      border: 1px solid rgba(248, 113, 113, 0.4);
+    }
+    .log-msg {
+      color: #e6edf3;
+      flex-grow: 1;
+    }
+    .log-empty {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      height: 100%;
+      color: #8b949e;
+      font-style: italic;
+      padding: 40px 0;
+    }
   </style>
 </head>
 <body>
   <div class="wrap">
     <header>
       <div class="brand">
-        <h1>管理控制台 <span class="ver">v0.68.7</span> <span id="verBadge" style="display:none;font-size:11px;padding:3px 8px;border-radius:12px;background:linear-gradient(135deg, #10B981, #059669);color:#fff;font-weight:600;cursor:pointer;margin-left:4px;box-shadow:0 2px 6px rgba(16,185,129,0.3)" title="点击查看更新并一键升级">🚀 发现新版本</span></h1>
+        <h1>管理控制台 <span class="ver">v0.68.8</span> <span id="verBadge" style="display:none;font-size:11px;padding:3px 8px;border-radius:12px;background:linear-gradient(135deg, #10B981, #059669);color:#fff;font-weight:600;cursor:pointer;margin-left:4px;box-shadow:0 2px 6px rgba(16,185,129,0.3)" title="点击查看更新并一键升级">🚀 发现新版本</span></h1>
         <div class="sub">
           <span class="status-badge"><span class="status-dot"></span> 运行正常</span>
         </div>
@@ -1523,6 +1595,7 @@
         <button data-tab="spirits">📖 精灵图鉴</button>
         <button data-tab="backups">💾 备份管理</button>
         <button data-tab="imgs">📁 根目录浏览</button>
+        <button data-tab="logs">📜 运行日志</button>
       </div>
       <button class="tab-nav-btn" id="tabNavNext" title="向后滚动">›</button>
     </div>
@@ -1921,6 +1994,51 @@
               <thead><tr><th>群号</th><th>成员数</th><th>状态</th><th>开关</th><th>删除</th></tr></thead>
             <tbody id="groupsBody"></tbody>
           </table>
+        </div>
+      </div>
+    </div>
+
+    <!-- 运行日志 -->
+    <div class="tab" id="tab-logs">
+      <div class="panel">
+        <div class="toolbar" style="flex-wrap:wrap;gap:8px">
+          <div style="display:flex;align-items:center;gap:10px">
+            <h2>📜 插件运行日志</h2>
+            <span class="status-badge" id="logsLiveBadge"><span class="status-dot"></span> 实时监听</span>
+          </div>
+          <div style="display:flex;align-items:center;gap:8px;margin-left:auto;flex-wrap:wrap">
+            <label style="display:inline-flex;align-items:center;gap:4px;font-size:12px;color:var(--text-secondary);cursor:pointer">
+              <input type="checkbox" id="logsAutoRefresh" checked style="cursor:pointer"> 自动刷新(3s)
+            </label>
+            <label style="display:inline-flex;align-items:center;gap:4px;font-size:12px;color:var(--text-secondary);cursor:pointer">
+              <input type="checkbox" id="logsAutoScroll" checked style="cursor:pointer"> 滚至底部
+            </label>
+            <select id="logsLevelFilter" style="padding:4px 8px;border-radius:8px;border:1px solid var(--line);background:var(--panel2);color:var(--text);font-size:12px">
+              <option value="">全部级别</option>
+              <option value="INFO">INFO</option>
+              <option value="WARN">WARN</option>
+              <option value="ERROR">ERROR</option>
+            </select>
+            <div class="search" style="margin:0;width:180px">
+              <span class="search-icon" style="font-size:12px">🔍</span>
+              <input id="logsSearch" placeholder="搜索关键词…" style="padding:4px 6px 4px 26px;font-size:12px" />
+            </div>
+            <button id="btnLogsRefresh" class="ghost" style="padding:4px 10px;font-size:12px">🔄 刷新</button>
+            <button id="btnLogsCopy" class="ghost" style="padding:4px 10px;font-size:12px">📋 复制</button>
+            <button id="btnLogsExport" class="ghost" style="padding:4px 10px;font-size:12px">📥 导出</button>
+            <button id="btnLogsClear" class="ghost del" style="padding:4px 10px;font-size:12px">🗑️ 清空</button>
+          </div>
+        </div>
+        
+        <div class="hint" style="display:flex;justify-content:space-between;align-items:center;margin:6px 0 10px;flex-wrap:wrap;gap:6px">
+          <span>记录插件运行、事件分发、系统调度与异常排查日志。单文件严格限制 2MB，单次展示最新 1000 条以内。</span>
+          <span id="logsMetaInfo" style="font-size:11.5px;color:var(--muted)">行数: 0 | 大小: 0 KB</span>
+        </div>
+
+        <div class="log-terminal" id="logTerminal">
+          <div id="logTerminalContent" class="log-terminal-inner">
+            <div class="log-empty">正在拉取日志数据…</div>
+          </div>
         </div>
       </div>
     </div>

@@ -62,8 +62,21 @@ _build_chain = getattr(_plat_layer, "_build_chain", None) if _HAS_CORE else None
 _append_at_segments = getattr(_plat_layer, "_append_at_segments", None) if _HAS_CORE else None
 _name_prefix = getattr(_plat_layer, "_name_prefix", None) if _HAS_CORE else None
 _do_platform = getattr(_plat_layer, "_do_platform", None) if _HAS_CORE else None
-# 缺失时直接抛错由上层捕获，避免静默fallback掩盖架构破环
 assert _maybe_dict and _normalize_cfg and _build_chain, "core 层未加载，请检查 pages→main→core 单向依赖"
+
+try:
+    from .core import logger as _logger_layer
+except ImportError:
+    try:
+        from core import logger as _logger_layer  # type: ignore
+    except Exception:
+        _logger_layer = None
+
+if _logger_layer:
+    try:
+        slave.log = lambda msg: _logger_layer.info(str(msg))
+    except Exception:
+        pass
 
 def _err(msg, code=500):
     try:
@@ -95,7 +108,7 @@ def _raw_file_response(data_bytes, filename):
 PLUGIN_ID = "astrbot_plugin_xbbot"
 PLUGIN_DESC = "小白(奴/签/银/娱/私/灵/骑/超管/帮派/冒险+主菜单+WebUI), 现代SQLite存储"
 PLUGIN_AUTHOR = "Light"
-PLUGIN_VERSION = "0.68.7"
+PLUGIN_VERSION = "0.68.8"
 PLUGIN_REPO = "https://github.com/emmfax/xb"
 
 # 复用 router 的主菜单，保持单源
@@ -214,6 +227,9 @@ class XbBot(Star):
         context.register_web_api(f"/{PLUGIN_ID}/groups/delete", self.page_groups_delete, ["POST"], "删除群聊配置")
         context.register_web_api(f"/{PLUGIN_ID}/admin/clear", self.page_clear_all, ["POST"], "清空所有数据（三重确认）")
         context.register_web_api(f"/{PLUGIN_ID}/version/check", self.page_version_check, ["GET", "POST"], "在线检查版本更新")
+        context.register_web_api(f"/{PLUGIN_ID}/logs", self.page_logs_get, ["GET"], "获取插件运行日志")
+        context.register_web_api(f"/{PLUGIN_ID}/logs/clear", self.page_logs_clear, ["POST"], "清空插件运行日志")
+        context.register_web_api(f"/{PLUGIN_ID}/logs/export", self.page_logs_export, ["GET", "POST"], "导出插件运行日志")
         ST.set_backup_dir(os.path.join(_BASE, "data", "backups"))
 
     async def _ensure_bot_uin(self, event):
@@ -470,6 +486,12 @@ class XbBot(Star):
                 except Exception:
                     pass
             if reply:
+                if _logger_layer:
+                    try:
+                        summary = str(reply)[:60].replace("\r", " ").replace("\n", " ")
+                        _logger_layer.info(f"[{'私聊' if is_private else f'群 {gid}'}] [{qq}] 指令: {raw.strip()[:40]} -> 响应: {summary}")
+                    except Exception:
+                        pass
                 if isinstance(reply, str) and reply.startswith("__XB_PLATFORM__"):
                     try:
                         note = await _do_platform(reply, event)
@@ -520,6 +542,11 @@ class XbBot(Star):
                         pass
         except Exception as e:
             import traceback
+            if _logger_layer:
+                try:
+                    _logger_layer.error(f"on_message异常: {e}\n{traceback.format_exc()}")
+                except Exception:
+                    pass
             try:
                 slave.log(f"on_message异常: {e}\n{traceback.format_exc()}")
             except Exception:
@@ -815,6 +842,30 @@ class XbBot(Star):
             return await handle_groups_delete(request)
         except Exception as e:
             return _err(f"groups delete failed: {e}", 500)
+
+    async def page_logs_get(self, request=None, *args, **kwargs):
+        req = request if request is not None else (args[0] if args else None)
+        try:
+            from .core.api.logs import handle_logs_get
+            return await handle_logs_get(req)
+        except Exception as e:
+            return _err(f"logs get failed: {e}", 500)
+
+    async def page_logs_clear(self, request=None, *args, **kwargs):
+        req = request if request is not None else (args[0] if args else None)
+        try:
+            from .core.api.logs import handle_logs_clear
+            return await handle_logs_clear(req)
+        except Exception as e:
+            return _err(f"logs clear failed: {e}", 500)
+
+    async def page_logs_export(self, request=None, *args, **kwargs):
+        req = request if request is not None else (args[0] if args else None)
+        try:
+            from .core.api.logs import handle_logs_export
+            return await handle_logs_export(req)
+        except Exception as e:
+            return _err(f"logs export failed: {e}", 500)
 
     def _backup_base(self):
         try:

@@ -609,6 +609,7 @@ const TAB_LOADERS = {
   backups: async () => { return typeof loadBackups === "function" ? loadBackups("") : Promise.resolve(); },
   imgs: async () => { return loadImages(""); },
   groups: async () => { return loadGroups(); },
+  logs: async () => { return loadLogs(); },
 };
 const TAB_DONE = {};
 
@@ -781,6 +782,11 @@ function bindTabs() {
       const el = document.getElementById("tab-" + b.dataset.tab);
       if (el) el.classList.add("on");
       const tab = b.dataset.tab;
+      if (tab === "logs") {
+        if (typeof startLogsAutoRefresh === "function") startLogsAutoRefresh();
+      } else {
+        if (typeof stopLogsAutoRefresh === "function") stopLogsAutoRefresh();
+      }
       // 切换 Tab 时保证当前选中按钮在可视区内
       try { b.scrollIntoView({ behavior: "smooth", inline: "center", block: "nearest" }); } catch (e) {}
       // 总览页每次点击都刷新，确保机器人QQ等快捷配置与配置页保持一致（同一接口 ST._CONFIG）
@@ -1375,7 +1381,7 @@ async function exportAllUsers() {
         count: usersList.length,
         users: usersList,
         export_at: res.export_at || Math.floor(Date.now() / 1000),
-        version: res.version || "0.68.7"
+        version: res.version || "0.68.8"
       };
       const jsonStr = JSON.stringify(payload, null, 2);
       triggerExportResult({
@@ -3505,3 +3511,174 @@ document.getElementById("btnCheckUpdate")?.addEventListener("click", () => check
 
 // 启动时静默检查一次
 setTimeout(() => { checkVersionUpdate(true); }, 1500);
+
+// ---------- 插件运行日志 ----------
+let LOGS_CACHE = [];
+let LOGS_TIMER = null;
+
+function parseLogLine(raw) {
+  // Line format: [YYYY-MM-DD HH:MM:SS] [LEVEL] msg
+  const m = raw.match(/^\[(\d{4}-\d{2}-\d{2}\s\d{2}:\d{2}:\d{2})\]\s+\[(INFO|WARN|ERROR)\]\s+(.*)$/);
+  if (m) {
+    return { ts: m[1], level: m[2], msg: m[3] };
+  }
+  return { ts: "", level: "INFO", msg: raw };
+}
+
+function renderLogs(logsList) {
+  const container = document.getElementById("logTerminalContent");
+  if (!container) return;
+  if (!logsList || logsList.length === 0) {
+    container.innerHTML = '<div class="log-empty">暂无匹配的运行日志</div>';
+    return;
+  }
+
+  const linesHtml = logsList.map(raw => {
+    const item = parseLogLine(raw);
+    const lvlClass = item.level.toLowerCase();
+    const tsHtml = item.ts ? `<span class="log-ts">[${esc(item.ts)}]</span>` : "";
+    const badgeHtml = item.level ? `<span class="log-badge ${lvlClass}">${esc(item.level)}</span>` : "";
+    return `<div class="log-line">${tsHtml}${badgeHtml}<span class="log-msg">${esc(item.msg)}</span></div>`;
+  }).join("");
+
+  container.innerHTML = linesHtml;
+
+  const autoScroll = document.getElementById("logsAutoScroll");
+  if (autoScroll && autoScroll.checked) {
+    const terminal = document.getElementById("logTerminal");
+    if (terminal) {
+      terminal.scrollTop = terminal.scrollHeight;
+    }
+  }
+}
+
+async function loadLogs(isAuto = false) {
+  try {
+    const lvl = (document.getElementById("logsLevelFilter")?.value || "").trim();
+    const kw = (document.getElementById("logsSearch")?.value || "").trim();
+    const q = new URLSearchParams({ limit: "500", level: lvl, keyword: kw });
+    
+    const res = await getBridge().apiGet("logs?" + q.toString());
+    const data = (res && res.result) || { logs: [], count: 0, total_lines: 0, file_size_kb: 0, max_file_mb: 2.0 };
+    
+    LOGS_CACHE = data.logs || [];
+    renderLogs(LOGS_CACHE);
+
+    const meta = document.getElementById("logsMetaInfo");
+    if (meta) {
+      meta.textContent = `当前展示: ${data.count} / ${data.total_lines} 行 | 文件大小: ${data.file_size_kb} KB (上限 ${data.max_file_mb} MB)`;
+    }
+  } catch (e) {
+    if (!isAuto) {
+      err("获取日志失败: " + e.message);
+    }
+  }
+}
+
+function startLogsAutoRefresh() {
+  stopLogsAutoRefresh();
+  const autoCheckbox = document.getElementById("logsAutoRefresh");
+  const liveBadge = document.getElementById("logsLiveBadge");
+  if (autoCheckbox && autoCheckbox.checked) {
+    if (liveBadge) {
+      liveBadge.innerHTML = '<span class="status-dot"></span> 实时监听';
+      liveBadge.style.opacity = "1";
+    }
+    LOGS_TIMER = setInterval(() => {
+      const logsTab = document.getElementById("tab-logs");
+      if (logsTab && logsTab.classList.contains("on")) {
+        loadLogs(true);
+      } else {
+        stopLogsAutoRefresh();
+      }
+    }, 3000);
+  } else {
+    if (liveBadge) {
+      liveBadge.innerHTML = '<span class="status-dot" style="background:var(--muted)"></span> 已暂停';
+      liveBadge.style.opacity = "0.7";
+    }
+  }
+}
+
+function stopLogsAutoRefresh() {
+  if (LOGS_TIMER) {
+    clearInterval(LOGS_TIMER);
+    LOGS_TIMER = null;
+  }
+}
+
+function initLogsEvents() {
+  document.getElementById("logsAutoRefresh")?.addEventListener("change", () => {
+    startLogsAutoRefresh();
+  });
+  document.getElementById("logsLevelFilter")?.addEventListener("change", () => {
+    loadLogs(false);
+  });
+  let kwTimer = null;
+  document.getElementById("logsSearch")?.addEventListener("input", () => {
+    if (kwTimer) clearTimeout(kwTimer);
+    kwTimer = setTimeout(() => loadLogs(false), 250);
+  });
+  document.getElementById("btnLogsRefresh")?.addEventListener("click", () => {
+    loadLogs(false);
+    toast("日志已刷新", "ok");
+  });
+  document.getElementById("btnLogsCopy")?.addEventListener("click", () => {
+    if (!LOGS_CACHE || LOGS_CACHE.length === 0) {
+      toast("当前无日志可复制", "warn");
+      return;
+    }
+    const text = LOGS_CACHE.join("\n");
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+      navigator.clipboard.writeText(text).then(() => toast("已复制日志到剪贴板", "ok")).catch(() => {
+        fallbackCopyText(text);
+      });
+    } else {
+      fallbackCopyText(text);
+    }
+  });
+  document.getElementById("btnLogsExport")?.addEventListener("click", async () => {
+    try {
+      toast("正在导出日志…", "info");
+      const url = getBridge().apiUrl ? getBridge().apiUrl("logs/export") : "/astrbot_plugin_xbbot/logs/export";
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = `xb_logs_${new Date().toISOString().slice(0,10)}.log`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      toast("日志导出成功", "ok");
+    } catch (e) {
+      err("导出日志失败: " + e.message);
+    }
+  });
+  document.getElementById("btnLogsClear")?.addEventListener("click", async () => {
+    const ok = await uiConfirm("确定要清空当前的插件运行日志吗？\n清空后不可恢复（将重新从空文件开始记录）。", "🗑️ 清空日志");
+    if (!ok) return;
+    try {
+      const res = await getBridge().apiPost("logs/clear", {});
+      toast(res.message || "日志已清空", "ok");
+      await loadLogs(false);
+    } catch (e) {
+      err("清空日志失败: " + e.message);
+    }
+  });
+}
+
+function fallbackCopyText(text) {
+  const ta = document.createElement("textarea");
+  ta.value = text;
+  ta.style.position = "fixed";
+  ta.style.opacity = "0";
+  document.body.appendChild(ta);
+  ta.select();
+  try {
+    document.execCommand("copy");
+    toast("已复制日志到剪贴板", "ok");
+  } catch (e) {
+    toast("复制失败，请手动选择复制", "bad");
+  }
+  document.body.removeChild(ta);
+}
+
+initLogsEvents();
