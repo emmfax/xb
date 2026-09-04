@@ -19,9 +19,11 @@ from .. import logger
 
 async def handle_logs_get(request=None):
     try:
-        limit_str = get_req_query(request, "limit", "200")
-        level = get_req_query(request, "level", "")
-        keyword = get_req_query(request, "keyword", "")
+        from .helpers import get_req_json
+        body = await get_req_json(request, {})
+        limit_str = get_req_query(request, "limit", "") or (body.get("limit") if isinstance(body, dict) else "") or "200"
+        level = get_req_query(request, "level", "") or (body.get("level") if isinstance(body, dict) else "") or ""
+        keyword = get_req_query(request, "keyword", "") or (body.get("keyword") if isinstance(body, dict) else "") or ""
         
         try:
             limit = int(limit_str)
@@ -52,21 +54,18 @@ async def handle_logs_export(request=None):
     try:
         log_path = logger.get_log_file_path()
         if os.path.isfile(log_path):
-            with open(log_path, "rb") as f:
-                content = f.read()
+            with open(log_path, "r", encoding="utf-8", errors="replace") as f:
+                content_str = f.read()
         else:
-            content = b""
+            content_str = ""
 
         ts = datetime.datetime.now().strftime("%Y%m%d_%H%M%S")
         filename = f"xb_logs_{ts}.log"
-        resp = _raw_file_response(content, filename)
-        if resp is not None:
-            return resp
-        
-        # Fallback to json if raw response not supported
+
         return json_response({
+            "status": "ok",
             "filename": filename,
-            "content": content.decode("utf-8", errors="replace")
+            "content": content_str
         })
     except Exception as e:
         return _err(f"导出日志失败: {e}", 500)

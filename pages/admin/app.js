@@ -783,6 +783,7 @@ function bindTabs() {
       if (el) el.classList.add("on");
       const tab = b.dataset.tab;
       if (tab === "logs") {
+        if (typeof loadLogs === "function") loadLogs(false);
         if (typeof startLogsAutoRefresh === "function") startLogsAutoRefresh();
       } else {
         if (typeof stopLogsAutoRefresh === "function") stopLogsAutoRefresh();
@@ -1381,7 +1382,7 @@ async function exportAllUsers() {
         count: usersList.length,
         users: usersList,
         export_at: res.export_at || Math.floor(Date.now() / 1000),
-        version: res.version || "0.68.8"
+        version: res.version || "0.68.9"
       };
       const jsonStr = JSON.stringify(payload, null, 2);
       triggerExportResult({
@@ -3556,11 +3557,22 @@ async function loadLogs(isAuto = false) {
   try {
     const lvl = (document.getElementById("logsLevelFilter")?.value || "").trim();
     const kw = (document.getElementById("logsSearch")?.value || "").trim();
-    const q = new URLSearchParams({ limit: "500", level: lvl, keyword: kw });
-    
-    const res = await getBridge().apiGet("logs?" + q.toString());
+    const params = { limit: "500", level: lvl, keyword: kw };
+
+    let res = null;
+    try {
+      res = await callApi("logs", params, "GET");
+    } catch (apiErr) {
+      console.warn("logs api get failed, fallback to POST", apiErr);
+      res = await callApi("logs", params, "POST");
+    }
+
+    if (res && res.status === "error") {
+      throw new Error(res.error || "获取日志失败");
+    }
+
     const data = (res && res.result) || { logs: [], count: 0, total_lines: 0, file_size_kb: 0, max_file_mb: 2.0 };
-    
+
     LOGS_CACHE = data.logs || [];
     renderLogs(LOGS_CACHE);
 
@@ -3569,8 +3581,13 @@ async function loadLogs(isAuto = false) {
       meta.textContent = `当前展示: ${data.count} / ${data.total_lines} 行 | 文件大小: ${data.file_size_kb} KB (上限 ${data.max_file_mb} MB)`;
     }
   } catch (e) {
+    console.error("loadLogs error:", e);
+    const container = document.getElementById("logTerminalContent");
+    if (container && (!LOGS_CACHE || LOGS_CACHE.length === 0)) {
+      container.innerHTML = `<div class="log-empty" style="color:var(--bad);line-height:1.8;padding:20px;text-align:center">⚠️ 无法连接日志接口 (${esc(e.message || "请求失败")})<br><span style="color:var(--muted);font-size:12px">💡 提示：若刚刚更新了插件代码，请<b>完全重启一次 AstrBot</b> 以加载后端新增的日志路由。</span></div>`;
+    }
     if (!isAuto) {
-      err("获取日志失败: " + e.message);
+      toast("拉取日志失败: " + (e.message || "请确认 AstrBot 已重启"), "bad");
     }
   }
 }
@@ -3619,66 +3636,70 @@ function initLogsEvents() {
     if (kwTimer) clearTimeout(kwTimer);
     kwTimer = setTimeout(() => loadLogs(false), 250);
   });
-  document.getElementById("btnLogsRefresh")?.addEventListener("click", () => {
-    loadLogs(false);
-    toast("日志已刷新", "ok");
+  document.getElementById("btnLogsRefresh")?.addEventListener("click", async () => {
+    toast("正在刷新日志…", "ok");
+    await loadLogs(false);
+    toast("日志刷新完成", "ok");
   });
   document.getElementById("btnLogsCopy")?.addEventListener("click", () => {
     if (!LOGS_CACHE || LOGS_CACHE.length === 0) {
-      toast("当前无日志可复制", "warn");
+      toast("当前无日志可复制", "bad");
       return;
     }
     const text = LOGS_CACHE.join("\n");
-    if (navigator.clipboard && navigator.clipboard.writeText) {
-      navigator.clipboard.writeText(text).then(() => toast("已复制日志到剪贴板", "ok")).catch(() => {
-        fallbackCopyText(text);
-      });
-    } else {
-      fallbackCopyText(text);
-    }
+    copyToClipboard(text);
   });
   document.getElementById("btnLogsExport")?.addEventListener("click", async () => {
     try {
-      toast("正在导出日志…", "info");
-      const url = getBridge().apiUrl ? getBridge().apiUrl("logs/export") : "/astrbot_plugin_xbbot/logs/export";
-      const a = document.createElement("a");
-      a.href = url;
-      a.download = `xb_logs_${new Date().toISOString().slice(0,10)}.log`;
-      document.body.appendChild(a);
-      a.click();
-      document.body.removeChild(a);
-      toast("日志导出成功", "ok");
+      toast("正在准备导出日志…", "ok");
+      let content = "";
+      let filename = `xb_logs_${new Date().toISOString().slice(0, 10)}.log`;
+
+      try {
+        const res = await callApi("logs/export", {}, "POST");
+        if (res && res.content) {
+          content = res.content;
+          if (res.filename) filename = res.filename;
+        }
+      } catch (e) {
+        console.warn("API export failed, falling back to cached logs", e);
+      }
+
+      if (!content && LOGS_CACHE && LOGS_CACHE.length > 0) {
+        content = LOGS_CACHE.join("\n");
+      }
+
+      if (!content) {
+        toast("当前无日志可导出", "bad");
+        return;
+      }
+
+      const blob = new Blob([content], { type: "text/plain;charset=utf-8" });
+      triggerDownload(blob, filename, content);
+      toast("日志已成功导出", "ok");
     } catch (e) {
-      err("导出日志失败: " + e.message);
+      toast("导出日志失败: " + e.message, "bad");
     }
   });
   document.getElementById("btnLogsClear")?.addEventListener("click", async () => {
     const ok = await uiConfirm("确定要清空当前的插件运行日志吗？\n清空后不可恢复（将重新从空文件开始记录）。", "🗑️ 清空日志");
     if (!ok) return;
     try {
-      const res = await getBridge().apiPost("logs/clear", {});
-      toast(res.message || "日志已清空", "ok");
+      toast("正在清空日志…", "ok");
+      const res = await callApi("logs/clear", {}, "POST");
+      if (res && res.status === "error") {
+        throw new Error(res.error || "清空失败");
+      }
+      toast((res && res.message) || "日志已清空", "ok");
+      LOGS_CACHE = [];
+      renderLogs([]);
+      const meta = document.getElementById("logsMetaInfo");
+      if (meta) meta.textContent = "当前展示: 0 / 0 行 | 文件大小: 0 KB (上限 2.0 MB)";
       await loadLogs(false);
     } catch (e) {
-      err("清空日志失败: " + e.message);
+      toast("清空日志失败: " + e.message, "bad");
     }
   });
-}
-
-function fallbackCopyText(text) {
-  const ta = document.createElement("textarea");
-  ta.value = text;
-  ta.style.position = "fixed";
-  ta.style.opacity = "0";
-  document.body.appendChild(ta);
-  ta.select();
-  try {
-    document.execCommand("copy");
-    toast("已复制日志到剪贴板", "ok");
-  } catch (e) {
-    toast("复制失败，请手动选择复制", "bad");
-  }
-  document.body.removeChild(ta);
 }
 
 initLogsEvents();
