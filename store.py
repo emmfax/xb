@@ -1142,16 +1142,44 @@ def maybe_auto_backup():
     return backup_user_data(force=False)
 
 # ==================== 10. kv ====================
-def recall_set(k, v):
+def _ensure_db():
+    global _DB, _DB_PATH
+    if _DB is not None:
+        return _DB
     with _LOCK:
-        _DB.execute("INSERT INTO kv(k, v) VALUES(?,?) "
-                    "ON CONFLICT(k) DO UPDATE SET v=excluded.v", (str(k), str(v)))
-        _maybe_commit()
+        if _DB is not None:
+            return _DB
+        try:
+            base = os.path.dirname(os.path.abspath(__file__))
+            cand = _PERSISTENT_DATA_DIR or get_persistent_data_dir(base)
+            p = os.path.join(cand, "xb.db")
+            init(p)
+        except Exception:
+            pass
+        return _DB
+
+def recall_set(k, v):
+    _ensure_db()
+    with _LOCK:
+        if _DB is None:
+            return
+        try:
+            _DB.execute("INSERT INTO kv(k, v) VALUES(?,?) "
+                        "ON CONFLICT(k) DO UPDATE SET v=excluded.v", (str(k), str(v)))
+            _maybe_commit()
+        except Exception:
+            pass
 
 def recall_get(k, default=None):
+    _ensure_db()
     with _LOCK:
-        row = _DB.execute("SELECT v FROM kv WHERE k=?", (str(k),)).fetchone()
-        return row[0] if row else default
+        if _DB is None:
+            return default
+        try:
+            row = _DB.execute("SELECT v FROM kv WHERE k=?", (str(k),)).fetchone()
+            return row[0] if row else default
+        except Exception:
+            return default
 
 def txn_two_wallets(gid, src_qq, dst_qq, amount):
     """原子双钱包转账：同持 _LOCK 一次提交，避免半成功"""

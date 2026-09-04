@@ -1611,24 +1611,29 @@ def _route_locked(gid, qq, raw):
         m = _re.search(r"@\s*([^@\s，,\r\n]+)", text)
         if m:
             nm = m.group(1).strip()
+            clean_nm = _re.sub(r"[\[\]【】\(\)\s]", "", nm)
             # 1. 查实时 NOTE_NAMES
             if NOTE_NAMES:
                 for _q, _n in NOTE_NAMES.items():
-                    if _n and (_n == nm or nm == _n.strip() or nm in _n):
+                    clean_n = _re.sub(r"[\[\]【】\(\)\s]", "", str(_n or ""))
+                    if clean_n and (clean_n == clean_nm or clean_nm in clean_n or clean_n in clean_nm):
                         target = str(_q)
                         text = text.replace(m.group(0), "", 1).strip()
                         break
             # 2. 查 store._AT_NAMES
             if not target and hasattr(store, "_AT_NAMES") and store._AT_NAMES:
-                _found_q = store._AT_NAMES.get(nm)
-                if _found_q:
-                    target = str(_found_q)
-                    text = text.replace(m.group(0), "", 1).strip()
+                for _an, _aq in store._AT_NAMES.items():
+                    clean_an = _re.sub(r"[\[\]【】\(\)\s]", "", str(_an or ""))
+                    if clean_an and (clean_an == clean_nm or clean_nm in clean_an or clean_an in clean_nm):
+                        target = str(_aq)
+                        text = text.replace(m.group(0), "", 1).strip()
+                        break
             # 3. 查群档案
             if not target:
                 for _uid in st.users():
                     _unm = uget(U(st, _uid), "name")
-                    if _unm and (_unm == nm or nm == _unm.strip() or nm in _unm):
+                    clean_unm = _re.sub(r"[\[\]【】\(\)\s]", "", str(_unm or ""))
+                    if clean_unm and (clean_unm == clean_nm or clean_nm in clean_unm or clean_unm in clean_rest if 'clean_rest' in locals() else clean_unm == clean_nm or clean_nm in clean_unm or clean_unm in clean_nm):
                         target = str(_uid)
                         text = text.replace(m.group(0), "", 1).strip()
                         break
@@ -1680,14 +1685,29 @@ def _route_locked(gid, qq, raw):
             return cmd_query(gid, qq, t, st)
         return cmd_myinfo(gid, qq, st)
     if text.startswith("查询"):
-        # 查询@QQ / 查询 @名字 / 查询 QQ / 查询 名字 -> 查他人我的信息，兼容已提取的 target
+        # 特殊别名：查询更新 / 查询版本 -> 转发到更新检测
+        if text.startswith("查询更新") or text.startswith("查询版本") or text.startswith("查询 版本"):
+            try:
+                from . import superadmin
+                return superadmin.handle(gid, qq, "检查更新", is_admin=True)
+            except Exception:
+                try:
+                    import superadmin
+                    return superadmin.handle(gid, qq, "检查更新", is_admin=True)
+                except Exception:
+                    pass
+        # 查询 (不带参数) / 查询我 / 查询自己 -> 直接查看自己的档案
+        rest = text[len("查询"):].strip()
+        if not target and (not rest or rest in ("我", "自己", "个人", "我的信息", "自己信息", "个人信息")):
+            return cmd_myinfo(gid, qq, st)
+
+        # 查询@QQ / 查询 @名字 / 查询 QQ / 查询 名字 -> 查他人档案，兼容已提取的 target
         t = target
         if not t:
             t2, _ = store.parse_at(text)
             if t2:
                 t = t2
             else:
-                rest = text[len("查询"):].strip()
                 if rest.startswith("@"):
                     rest = rest[1:].strip()
                 if rest:
@@ -1695,21 +1715,31 @@ def _route_locked(gid, qq, raw):
                     if m_num:
                         t = m_num.group(1)
                     else:
+                        clean_rest = _re.sub(r"[\[\]【】\(\)\s]", "", rest)
+                        # 1. 查 NOTE_NAMES
                         for _q, _n in NOTE_NAMES.items():
-                            if _n and (_n == rest or rest == _n.strip() or rest in _n):
+                            clean_n = _re.sub(r"[\[\]【】\(\)\s]", "", str(_n or ""))
+                            if clean_n and (clean_n == clean_rest or clean_rest in clean_n or clean_n in clean_rest):
                                 t = str(_q)
                                 break
+                        # 2. 查 store._AT_NAMES
                         if not t and hasattr(store, "_AT_NAMES") and store._AT_NAMES:
-                            t = store._AT_NAMES.get(rest)
+                            for _an, _aq in store._AT_NAMES.items():
+                                clean_an = _re.sub(r"[\[\]【】\(\)\s]", "", str(_an or ""))
+                                if clean_an and (clean_an == clean_rest or clean_rest in clean_an or clean_an in clean_rest):
+                                    t = str(_aq)
+                                    break
+                        # 3. 查群档案
                         if not t:
                             for _uid in st.users():
                                 _unm = uget(U(st, _uid), "name")
-                                if _unm and (_unm == rest or rest == _unm.strip() or rest in _unm):
+                                clean_unm = _re.sub(r"[\[\]【】\(\)\s]", "", str(_unm or ""))
+                                if clean_unm and (clean_unm == clean_rest or clean_rest in clean_unm or clean_unm in clean_rest):
                                     t = str(_uid)
                                     break
         if t:
             return cmd_query(gid, qq, t, st)
-        return "格式：查询 @QQ"
+        return "未能找到该成员～格式：【查询 @QQ】或【查询 昵称】"
     if text.startswith("补偿"):
         mnum = _NUM.search(text)
         amt = int(mnum.group(1)) if mnum else 0

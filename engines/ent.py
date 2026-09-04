@@ -327,17 +327,23 @@ _GAME_KIND_MAP = {
 
 
 def _clean_expired_game(gid, max_seconds=180):
-    """自动清理超时闲置的会话游戏锁，避免单群永久卡死"""
+    """自动清理超时闲置或异常遗留的会话游戏锁，避免单群永久卡死"""
     cur = _active_game(gid)
     if not cur:
         return False
     kind = _GAME_KIND_MAP.get(cur)
     if not kind:
-        return False
+        _clear_active_game(gid)
+        return True
     try:
         start_val = ST.recall_get(f"{kind}_start_{gid}", "0")
-        start_ts = int(start_val or "0")
-        if start_ts > 0 and (int(time.time()) - start_ts) > max_seconds:
+        try:
+            start_ts = int(start_val or "0")
+        except Exception:
+            start_ts = 0
+        now = int(time.time())
+        # start_ts <= 0 属于脏数据/孤儿锁，或者距离开局超过 max_seconds，均清理
+        if start_ts <= 0 or (now - start_ts) > max_seconds:
             owner = ST.recall_get(f"{kind}_owner_{gid}", "")
             ST.recall_set(f"{kind}_owner_{gid}", "")
             ST.recall_set(f"{kind}_players_{gid}", "")
@@ -346,6 +352,9 @@ def _clean_expired_game(gid, max_seconds=180):
                 ST.recall_set(f"{kind}_{gid}_{owner}", "")
             if kind == "chain":
                 ST.recall_set(f"chain_{gid}", "")
+                ST.recall_set(f"chain_used_{gid}", "")
+                ST.recall_set(f"chain_last_qq_{gid}", "")
+                ST.recall_set(f"chain_last_time_{gid}", "")
             elif kind == "game24":
                 ST.recall_set(f"game24_{gid}_{owner}", "")
             _clear_active_game(gid)
@@ -360,9 +369,19 @@ def _check_single_game(gid, new_label):
     cur = _active_game(gid)
     if cur and cur != new_label:
         return f"已有进行中的【{cur}】游戏，请先结束当前游戏再开新局！（发送【退出{cur}】结束）"
-    # 同类型已在进行中也拦截（避免重复开局）
+    # 同类型已在进行中：检查是否已经无互动超过 60 秒，若超过则自动刷新重开
     if cur == new_label:
-        return f"已有进行中的【{cur}】游戏，请先完成或退出后再开新局！"
+        kind = _GAME_KIND_MAP.get(cur, "")
+        if kind:
+            start_val = ST.recall_get(f"{kind}_start_{gid}", "0")
+            try:
+                start_ts = int(start_val or "0")
+            except Exception:
+                start_ts = 0
+            if start_ts <= 0 or (int(time.time()) - start_ts) > 60:
+                _clean_expired_game(gid, max_seconds=0)
+                return None
+        return f"已有进行中的【{cur}】游戏，请先完成或退出后再开新局！（发送【退出{cur}】可重新开局）"
     return None
 
 
@@ -821,7 +840,8 @@ def _play(gid, qq, text):
             except Exception: pass
     # 若文本明显是其他系统的指令，则不拦截为答题答案，避免吞掉（需求14/15）
     _CMD_PREFIXES = ("领养","领取","精灵","坐骑","帮派","adventure","签到","转账","deposit","取款","购买","抽奖","抽签","扔炸弹","猜拳","开始","加入","退出","我的","查询","打赏","买下","释放","保护","打架","讨好","学习","祈福","造反","打工","收工","禁言","踢人","扣钱","充钱","群列表","应用统计","财富榜","排行榜","切换","查看","丢弃","设置","回收","携带","进化","对战","排行","你好","在吗","谢谢","晚安",
-                    "创建","成员","贡献","weapon","修筑","福利","发起","管理","解散","邀请","同意","接受","当前","选择","复活","背包","商城","地图","出战","丢弃","进化","对战","帮派","精灵","坐骑","银行","奴隶","超管","娱乐","私聊","系统","榜","接龙","急转弯","字谜","猜数","答题","二四点","打劫","赌博","红包","福利","贡献","修筑","成员","管理","解散","邀请","同意","接受","当前","选择","复活","背包","商城","地图","adventure","领养","精灵","坐骑","帮派","adventure","签到","银行","奴隶","超管","娱乐","私聊")
+                    "创建","成员","贡献","weapon","修筑","福利","发起","管理","解散","邀请","同意","接受","当前","选择","复活","背包","商城","地图","出战","丢弃","进化","对战","帮派","精灵","坐骑","银行","奴隶","超管","娱乐","私聊","系统","榜","接龙","急转弯","字谜","猜数","答题","二四点","打劫","赌博","红包","福利","贡献","修筑","成员","管理","解散","邀请","同意","接受","当前","选择","复活","背包","商城","地图","adventure","领养","精灵","坐骑","帮派","adventure","签到","银行","奴隶","超管","娱乐","私聊",
+                    "更新","检查更新","小白更新","查询更新","检查版本","小白升级","版本","小白版本","xb版本","插件版本","清空","重置","备份","维护","菜单","帮助")
     def _is_cmd(txt):
         t = txt.strip()
         for p in _CMD_PREFIXES:

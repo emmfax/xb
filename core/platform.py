@@ -81,8 +81,9 @@ def _append_at_segments(raw, event, gid="", slave_mod=None):
         chain = event.message_obj.message or []
         ats = []
         for comp in chain:
-            comp_type = getattr(comp, "type", "") or ""
-            if "at" not in str(comp_type).lower():
+            comp_type = getattr(comp, "type", "") or getattr(comp, "component_type", "") or comp.__class__.__name__
+            is_at = "at" in str(comp_type).lower() or hasattr(comp, "qq") or hasattr(comp, "target")
+            if not is_at:
                 continue
             q = getattr(comp, "qq", None)
             if q is None:
@@ -98,19 +99,25 @@ def _append_at_segments(raw, event, gid="", slave_mod=None):
                 try:
                     nm = (getattr(comp, "name", None) or getattr(comp, "display", None) or getattr(comp, "card", None) or getattr(comp, "nickname", None) or "")
                     nm = str(nm).strip()
-                    if nm and q and sm is not None:
-                        old = sm.NOTE_NAMES.get(q, "")
-                        sm.NOTE_NAMES[q] = nm
-                        if old != nm:
-                            try:
-                                st = sm.state(gid)
-                                if st.has_section(q):
-                                    u = st[q]
-                                    if u.get("name", "") != nm:
-                                        u["name"] = nm
-                                        sm.save(gid)
-                            except Exception:
-                                pass
+                    if nm and q:
+                        if sm is not None:
+                            old = sm.NOTE_NAMES.get(q, "")
+                            sm.NOTE_NAMES[q] = nm
+                            if old != nm:
+                                try:
+                                    st = sm.state(gid)
+                                    if st.has_section(q):
+                                        u = st[q]
+                                        if u.get("name", "") != nm:
+                                            u["name"] = nm
+                                            sm.save(gid)
+                                except Exception:
+                                    pass
+                        try:
+                            import store as _st_reg
+                            _st_reg.register_name(q, nm)
+                        except Exception:
+                            pass
                 except Exception:
                     pass
         if ats:

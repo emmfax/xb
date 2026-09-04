@@ -410,13 +410,13 @@ def _version():
                 except Exception:
                     pass
         if not ver:
-            ver = "0.68.12"
+            ver = "0.68.13"
         return f"小白版本：{ver}"
     except Exception:
-        return "小白版本：0.68.12"
+        return "小白版本：0.68.13"
 
 # ---- 统一入口（测试指令仅超管，WebUI可配但不显示于MENU，已删 个人信息） ----
-_ADMIN_CMDS = ("群列表", "应用统计", "扣钱", "充钱", "清空", "重置", "禁言", "踢人", "备份xb", "备份", "开启维护", "关闭维护", "维护信息", "检查更新", "小白升级", "小白更新", "测试testxb", "测试testxb1", "测试testxb2", "测试testxb3", "测试testxb4", "测试testxb5", "测试testxb6", "测试testxb7", "测试testxb8", "超管列表")
+_ADMIN_CMDS = ("群列表", "应用统计", "扣钱", "充钱", "清空", "重置", "禁言", "踢人", "备份xb", "备份", "开启维护", "关闭维护", "维护信息", "测试testxb", "测试testxb1", "测试testxb2", "测试testxb3", "测试testxb4", "测试testxb5", "测试testxb6", "测试testxb7", "测试testxb8", "超管列表")
 
 
 def handle(gid, qq, raw, is_admin=False):
@@ -426,6 +426,34 @@ def handle(gid, qq, raw, is_admin=False):
     # 允许所有人查询版本
     if text in ("小白版本", "版本", "xb版本", "插件版本"):
         return _version()
+    # 允许所有人查询云端更新情况（只读无害，支持 更新/查询更新/检查更新/小白更新）
+    if text in ("检查更新", "小白更新", "检查版本", "查询更新", "更新", "查看更新", "小白升级"):
+        try:
+            info = None
+            try:
+                from ..core.api import updater
+                info = updater.check_latest_version()
+            except Exception:
+                try:
+                    from core.api import updater
+                    info = updater.check_latest_version()
+                except Exception:
+                    pass
+
+            if info and info.get("has_update"):
+                lat_v = info.get("latest_version")
+                cur_v = info.get("current_version")
+                name = info.get("release_name", "")
+                return f"🚀 发现小白新版本【{lat_v}】(当前: {cur_v})\n🏷️ 发布信息: {name}\n💡 可前往 AstrBot 后台「插件管理」页面点击更新升级！"
+            elif info:
+                cur_v = info.get("current_version")
+                lat_v = info.get("latest_version")
+                return f"✅ 当前小白已是最新版本【{cur_v}】(云端最新: {lat_v})。"
+            else:
+                return _version()
+        except Exception as e:
+            return f"检查更新异常: {e}"
+
     if text in ST.wake("超管系统", "超管系统"):
         if not is_admin:
             return "亲亲,你没有相关权限哦~"
@@ -466,34 +494,6 @@ def handle(gid, qq, raw, is_admin=False):
         sw = ST.cfg("维护配置", "维护开关", "假")
         msg = ST.cfg("维护配置", "维护信息", "🚧 维护中，仅超管可用，请稍后再试。")
         return f"维护开关：{sw}\r\n维护信息：{msg}"
-    if text in ("小白版本", "版本"):
-        return _version()
-    if text in ("检查更新", "小白更新", "检查版本"):
-        try:
-            info = None
-            try:
-                from ..core.api import updater
-                info = updater.check_latest_version()
-            except Exception:
-                try:
-                    from core.api import updater
-                    info = updater.check_latest_version()
-                except Exception:
-                    pass
-
-            if info and info.get("has_update"):
-                lat_v = info.get("latest_version")
-                cur_v = info.get("current_version")
-                name = info.get("release_name", "")
-                return f"🚀 发现小白新版本【{lat_v}】(当前: {cur_v})\n🏷️ 发布信息: {name}\n💡 可前往 AstrBot 后台「插件管理」页面点击更新升级！"
-            elif info:
-                cur_v = info.get("current_version")
-                lat_v = info.get("latest_version")
-                return f"✅ 当前小白已是最新版本【{cur_v}】(云端最新: {lat_v})。"
-            else:
-                return f"小白版本：{_version()}"
-        except Exception as e:
-            return f"检查更新异常: {e}"
     # 测试指令（WebUI 指令-超管系统可见，聊天不显示，仅 main._dispatch 处理）
     if text.startswith("测试testxb"):
         return None
