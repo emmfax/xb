@@ -1753,7 +1753,14 @@ def _img_cq(path):
 
 def init_slave(bot_uin="", note_names=None, import_wallet_dir=""):
     """适配层启动时调用: store 初始化 + 机器人QQ + 名片缓存 + (可选)旧drea钱包导入"""
-    global BOT_UIN
+    global BOT_UIN, DATA_DIR, GROUPS_DIR, WALLET_DIR, DB_PATH, CONFIG_JSON, GACHA_DIR, EVENTS_JSON
+    DATA_DIR = _resolve_persistent_data_dir()
+    GROUPS_DIR = _os.path.join(DATA_DIR, "groups")
+    WALLET_DIR = _os.path.join(DATA_DIR, "wallet")
+    DB_PATH = _os.path.join(DATA_DIR, "nuli_slave.db")
+    CONFIG_JSON = _os.path.join(DATA_DIR, "config.json")
+    GACHA_DIR = _os.path.join(DATA_DIR, "gacha_img")
+    EVENTS_JSON = _os.path.join(DATA_DIR, "events.json")
     BOT_UIN = str(bot_uin or "")
     if note_names:
         NOTE_NAMES.update(note_names)
@@ -1781,28 +1788,34 @@ def init_slave(bot_uin="", note_names=None, import_wallet_dir=""):
 
 
 def _migrate_legacy_group_ini():
-    """一次性: 把旧 light 群档案 ini 迁入 SQLite(源文件仅改名备份)"""
+    """一次性: 把旧 light 群档案 ini 迁入 SQLite(源文件保留安全备份)"""
     import configparser as _cp2
-    for fn in _os.listdir(GROUPS_DIR):
-        if not fn.lower().endswith(".ini"):
+    candidate_dirs = [GROUPS_DIR]
+    cand_light = _os.path.join(_BASE, "..", "..", "light", "data", "nuli_slave")
+    if _os.path.isdir(cand_light):
+        candidate_dirs.append(cand_light)
+    for gdir in candidate_dirs:
+        if not _os.path.isdir(gdir):
             continue
-        gid = fn[:-4]
-        if not gid.isdigit():
-            continue
-        g = store.group(gid)
-        if g.users():
-            continue
-        path = _os.path.join(GROUPS_DIR, fn)
-        for enc in ("utf-8", "gbk"):
-            try:
-                cp = _cp2.ConfigParser(interpolation=None)
-                cp.optionxform = str
-                cp.read(path, encoding=enc)
-                for sec in cp.sections():
-                    g[sec].update({k: cp.get(sec, k, fallback="") for k in cp.options(sec)})
-                store.save_group(gid)
-                _os.rename(path, path + ".migrated")
-                log(f"群档案迁移: {fn}")
-                break
-            except Exception:
+        for fn in _os.listdir(gdir):
+            if not fn.lower().endswith(".ini"):
                 continue
+            gid = fn[:-4]
+            if not gid.isdigit():
+                continue
+            g = store.group(gid)
+            if g.users():
+                continue
+            path = _os.path.join(gdir, fn)
+            for enc in ("utf-8", "gbk"):
+                try:
+                    cp = _cp2.ConfigParser(interpolation=None)
+                    cp.optionxform = str
+                    cp.read(path, encoding=enc)
+                    for sec in cp.sections():
+                        g[sec].update({k: cp.get(sec, k, fallback="") for k in cp.options(sec)})
+                    store.save_group(gid)
+                    log(f"群档案迁移成功: {fn} -> 群 {gid}")
+                    break
+                except Exception:
+                    continue

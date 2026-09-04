@@ -698,56 +698,144 @@ def redpack_get(gid, pwd):
 # ==================== 7. 初始化 / 落盘 / 迁移 ====================
 _PERSISTENT_DATA_DIR = ""
 
+def set_persistent_data_dir(path):
+    """显式设置或更新持久化数据目录（支持 AstrBot StarTools 官方注入与动态热重连）"""
+    global _PERSISTENT_DATA_DIR, _DB, _DB_PATH
+    if not path:
+        return
+    path = str(path).strip()
+    try:
+        os.makedirs(path, exist_ok=True)
+    except Exception:
+        pass
+    _PERSISTENT_DATA_DIR = path
+    base = os.path.dirname(os.path.abspath(__file__))
+    _auto_migrate_and_heal(path, base)
+    target_db = os.path.join(path, "nuli_slave.db")
+    with _LOCK:
+        if _DB is not None and _DB_PATH and _DB_PATH != target_db:
+            try:
+                flush_all()
+                if os.path.isfile(_DB_PATH) and not os.path.isfile(target_db):
+                    import shutil
+                    shutil.copy2(_DB_PATH, target_db)
+                elif os.path.isfile(_DB_PATH) and os.path.isfile(target_db):
+                    merge_from(_DB_PATH)
+                try:
+                    _DB.close()
+                except Exception:
+                    pass
+                _DB = None
+                init(target_db)
+            except Exception:
+                pass
+
+def _auto_migrate_and_heal(cand, base):
+    """自动双向自愈与迁移：把旧数据/图库无损同步迁移到持久化目录"""
+    if not cand or not os.path.isdir(cand):
+        return
+    try:
+        import shutil
+        cand_db = os.path.join(cand, "nuli_slave.db")
+        cand_xbbot = os.path.join(cand, "xbbot.db")
+        # 兼容 xbbot.db 自动更名为规范 nuli_slave.db
+        if not os.path.isfile(cand_db) and os.path.isfile(cand_xbbot):
+            try:
+                shutil.copy2(cand_xbbot, cand_db)
+            except Exception:
+                pass
+        # 插件根目录下旧数据自愈迁移到持久化目录（绝不反向覆盖已存在的有效用户数据）
+        for f in ("nuli_slave.db", "xbbot.db", "config.json", "events.json"):
+            src_f = os.path.join(base, "data", f)
+            dst_f = os.path.join(cand, f)
+            if os.path.isfile(src_f) and not os.path.isfile(dst_f):
+                try:
+                    shutil.copy2(src_f, dst_f)
+                except Exception:
+                    pass
+        # 内置武器图库自愈迁移
+        src_gacha = os.path.join(base, "data", "gacha_img")
+        dst_gacha = os.path.join(cand, "gacha_img")
+        if os.path.isdir(src_gacha):
+            try:
+                shutil.copytree(src_gacha, dst_gacha, dirs_exist_ok=True)
+            except Exception:
+                pass
+        # 兼容旧 groups/wallet 目录自愈
+        for sub in ("groups", "wallet"):
+            src_sub = os.path.join(base, "data", sub)
+            dst_sub = os.path.join(cand, sub)
+            if os.path.isdir(src_sub):
+                try:
+                    shutil.copytree(src_sub, dst_sub, dirs_exist_ok=True)
+                except Exception:
+                    pass
+    except Exception:
+        pass
+
 def get_persistent_data_dir(plugin_base=""):
     """解析 AstrBot 官方推荐持久化目录 data/plugin_data/astrbot_plugin_xbbot/
-    若在开发工作区或非 AstrBot 标准目录，优雅回退至 plugin_base/data 并保持结构自愈。
+    1. 优先使用 AstrBot 官方 StarTools.get_data_dir()
+    2. 多层级智能解析上级 data/plugin_data/
+    3. 优雅回退至 plugin_base/data 并保持结构双向自愈
     """
     global _PERSISTENT_DATA_DIR
     if _PERSISTENT_DATA_DIR and os.path.isdir(_PERSISTENT_DATA_DIR):
         return _PERSISTENT_DATA_DIR
+
+    base = plugin_base or os.path.dirname(os.path.abspath(__file__))
+    if not os.path.isdir(os.path.join(base, "data")) and os.path.isdir(os.path.join(os.path.dirname(base), "data")):
+        base = os.path.dirname(base)
+
+    # 1. 官方最高优先级：AstrBot 官方 StarTools.get_data_dir()
     try:
-        base = plugin_base or os.path.dirname(os.path.abspath(__file__))
-        if not os.path.isdir(os.path.join(base, "data")) and os.path.isdir(os.path.join(os.path.dirname(base), "data")):
-            base = os.path.dirname(base)
-        parent_plugins = os.path.dirname(base)
-        p_name = os.path.basename(parent_plugins)
-        if p_name in ("plugins", "astrbot_plugins"):
-            astrbot_root = os.path.dirname(parent_plugins)
-            cands = [
-                os.path.join(astrbot_root, "data", "plugin_data", "astrbot_plugin_xbbot"),
-                os.path.join(astrbot_root, "plugin_data", "astrbot_plugin_xbbot"),
-            ]
-            for cand in cands:
-                try:
-                    os.makedirs(cand, exist_ok=True)
-                    # 自动无缝双向自愈迁移
-                    for f in ("nuli_slave.db", "xbbot.db", "config.json", "events.json"):
-                        src_f = os.path.join(base, "data", f)
-                        dst_f = os.path.join(cand, f)
-                        if os.path.isfile(src_f) and not os.path.isfile(dst_f):
-                            try:
-                                import shutil
-                                shutil.copy2(src_f, dst_f)
-                            except Exception:
-                                pass
-                    # 自动同步内置武器图库
-                    src_gacha = os.path.join(base, "data", "gacha_img")
-                    dst_gacha = os.path.join(cand, "gacha_img")
-                    if os.path.isdir(src_gacha):
-                        try:
-                            import shutil
-                            shutil.copytree(src_gacha, dst_gacha, dirs_exist_ok=True)
-                        except Exception:
-                            pass
-                    _PERSISTENT_DATA_DIR = cand
-                    return cand
-                except Exception:
-                    continue
+        from astrbot.api.star import StarTools
+        official_p = StarTools.get_data_dir()
+        if official_p:
+            cand = str(official_p)
+            os.makedirs(cand, exist_ok=True)
+            _PERSISTENT_DATA_DIR = cand
+            _auto_migrate_and_heal(cand, base)
+            return cand
     except Exception:
         pass
+
+    # 2. 向上多级探查 AstrBot 规范 data/plugin_data/astrbot_plugin_xbbot
+    try:
+        p = os.path.abspath(base)
+        for _ in range(5):
+            parent = os.path.dirname(p)
+            if not parent or parent == p:
+                break
+            p_name = os.path.basename(parent)
+            if p_name in ("plugins", "astrbot_plugins"):
+                grandparent = os.path.dirname(parent)
+                gp_name = os.path.basename(grandparent)
+                cands = []
+                if gp_name == "data":
+                    # 如 /root/data/plugins/xbbot -> grandparent 就是 /root/data
+                    cands.append(os.path.join(grandparent, "plugin_data", "astrbot_plugin_xbbot"))
+                    cands.append(os.path.join(os.path.dirname(grandparent), "data", "plugin_data", "astrbot_plugin_xbbot"))
+                else:
+                    # 如 /root/astrbot_plugins/xbbot -> grandparent 就是 /root
+                    cands.append(os.path.join(grandparent, "data", "plugin_data", "astrbot_plugin_xbbot"))
+                    cands.append(os.path.join(grandparent, "plugin_data", "astrbot_plugin_xbbot"))
+                for cand in cands:
+                    try:
+                        os.makedirs(cand, exist_ok=True)
+                        _PERSISTENT_DATA_DIR = cand
+                        _auto_migrate_and_heal(cand, base)
+                        return cand
+                    except Exception:
+                        continue
+            p = parent
+    except Exception:
+        pass
+
     fallback = os.path.join(os.path.dirname(os.path.abspath(__file__)), "data")
     os.makedirs(fallback, exist_ok=True)
     _PERSISTENT_DATA_DIR = fallback
+    _auto_migrate_and_heal(fallback, base)
     return fallback
 
 def init(db_path, config=None):
@@ -1065,7 +1153,7 @@ __all__ = ["register_names","register_name","parse_at","set_config","cfg","cfgi"
            "Acct","acct","acct_add","acct_save",
            "Group","group","group_user","save_group",
            "redpack_put","redpack_get",
-           "init","flush_all","merge_from","get_persistent_data_dir",
+           "init","flush_all","merge_from","get_persistent_data_dir","set_persistent_data_dir",
            "set_config_path","set_astrbot_config","sync_astrbot_config","set_ini","save_config",
            "set_backup_dir","backup_user_data","maybe_auto_backup",
            "recall_set","recall_get"]

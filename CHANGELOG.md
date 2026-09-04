@@ -1,8 +1,8 @@
 # 更新日志
 
-## v0.68.1
-- 🛡️ **WebAPI 全接口通用安全解析防护**：全面接入 `helpers.get_req_query` 与 `helpers.get_req_json`，彻底杜绝 aiohttp 请求体为空或参数缺失导致的 `NoneType` / `AttributeError` 异常（全面覆盖 backup/config/game/groups/images/legacy/users 全部 7 大路由）；
-- 💾 **数据持久化存储架构统一**：全面统合 `store.get_persistent_data_dir()` 持久化路径，修复 `main.py`、`engines/slave.py`、`backup.py` 与 `images.py` 等模块多头打开 SQLite 数据库与插件升级可能丢失数据的风险，实现数据目录自动迁移与双向自愈；
-- 🚦 **指令路由器系统开关隔离修复**：修复 `core/router.py` 中子系统开关拦截范围扩大化的严重缺陷（过去关闭某个系统会导致非该系统指令与普通聊天被误拦截），并修复 `'adventure': '冒险'` 映射，确保仅当用户输入命中对应关闭系统的指令集时才进行友好提示拦截；
-- ⚡ **SQLite LRU 脏数据防丢失加固**：加固 `store.py` 账户缓存 LRU 溢出淘汰逻辑，在丢弃前对 `dirty` 标志位进行检测并主动触发 `flush()` 同步 WAL，杜绝高并发内存被逐出时的状态回退隐患；
-- 🏷️ **版本号 9 处强一致性同步对齐**：所有核心代码、接口与管理控制台全量同步对齐至版本 0.68.1。
+## v0.68.2
+- 🛡️ **AstrBot 官方持久化规范全面接入（StarTools.get_data_dir）**：全面接入官方原生 `StarTools.get_data_dir()` 专属数据保险箱接口，彻底修复强制重装、插件更新时因 AstrBot 物理删除插件源码目录导致的数据丢失痛点；
+- 💾 **多层级持久化路径解析加固**：彻底消除上级推导中的 `data/data` 冗余嵌套，确保无论在 Docker、源码还是自定义部署模式下均精准锁定至 `data/plugin_data/astrbot_plugin_xbbot/`；
+- 🔄 **数据库动态热绑定与平滑热迁移**：新增 `store.set_persistent_data_dir`，支持 AstrBot 启动时动态注入官方持久化目录并自动将旧库数据原子热迁移至新库；
+- 📦 **历史数据全自动发现与自愈抢救**：启动时自动扫描历史群档案并自愈迁入 SQLite，确保存量群员身价、签到、金币与武器数据 100% 完整继承；
+- 🏷️ **全库版本号绝对一致性同步**：所有核心代码、接口与管理控制台全量同步对齐至版本 0.68.2。
