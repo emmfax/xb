@@ -1830,3 +1830,36 @@ def _migrate_legacy_group_ini():
                     break
                 except Exception:
                     continue
+
+
+def clear_user_slave(gid, qq):
+    """清除单用户的奴隶信息，并释放该用户持有的所有奴隶"""
+    gid = str(gid).strip()
+    qq = str(qq).strip()
+    if not (gid.isdigit() and qq.isdigit()):
+        return
+    with _cmd_lock(gid):
+        st = state(gid)
+        # 1. 移除该用户自己的奴隶档案（重置为完全未建立档案状态）
+        if hasattr(st, "remove_section"):
+            st.remove_section(qq)
+        elif st.has_section(qq):
+            try:
+                del st._users[qq]
+            except Exception:
+                pass
+        # 2. 释放该用户名下的所有奴隶
+        for sec in st.sections():
+            if str(sec) == qq:
+                continue
+            u = st[sec]
+            if str(u.get("owner", "")) == qq:
+                u["owner"] = ""
+                u["purchase_price"] = "0"
+                u["purchase_time"] = ""
+                u["protect_until"] = ""
+                u["protector"] = ""
+                if hasattr(st, "mark_dirty"):
+                    st.mark_dirty(sec)
+        save(gid)
+

@@ -209,6 +209,7 @@ class XbBot(Star):
         context.register_web_api(f"/{PLUGIN_ID}/commands", self.page_commands, ["GET"], "指令一览")
         context.register_web_api(f"/{PLUGIN_ID}/users", self.page_users, ["GET"], "用户/财富列表")
         context.register_web_api(f"/{PLUGIN_ID}/user/edit", self.page_user_edit, ["POST"], "编辑用户数据(金币/体力/魅力/奖券)")
+        context.register_web_api(f"/{PLUGIN_ID}/user/clear", self.page_user_clear, ["POST", "GET"], "清除单用户数据(含奴隶与精灵并可重领新手礼包)")
         context.register_web_api(f"/{PLUGIN_ID}/images/list", self.page_images_list, ["GET"], "图片目录浏览")
         context.register_web_api(f"/{PLUGIN_ID}/images/upload", self.page_images_upload, ["POST"], "上传图片")
         context.register_web_api(f"/{PLUGIN_ID}/images/delete", self.page_images_delete, ["POST"], "删除图片")
@@ -610,6 +611,13 @@ class XbBot(Star):
             return await handle_user_edit(request)
         except Exception as e:
             return _err(f"edit failed: {e}", 500)
+
+    async def page_user_clear(self, request=None, *args, **kwargs):
+        try:
+            from .core.api.users import handle_user_clear
+            return await handle_user_clear(request)
+        except Exception as e:
+            return _err(f"clear failed: {e}", 500)
 
     async def page_user_export(self, request=None, *args, **kwargs):
         # _raw_file_response is_raw 保留关键字以兼容 test_fix 检测

@@ -543,6 +543,27 @@ class Group:
         return str(qq) in self._users
     def users(self):
         return self._users
+    def remove_section(self, qq):
+        qq = str(qq)
+        with _LOCK:
+            if qq in self._users:
+                self._users.pop(qq, None)
+                self._dirty = True
+                self._dirty_qqs.add(qq)
+                if _DB is not None:
+                    try:
+                        _DB.execute("DELETE FROM groups WHERE gid=? AND qq=?", (int(self._gid), int(qq)))
+                        _maybe_commit()
+                    except Exception:
+                        pass
+                return True
+            elif _DB is not None:
+                try:
+                    _DB.execute("DELETE FROM groups WHERE gid=? AND qq=?", (int(self._gid), int(qq)))
+                    _maybe_commit()
+                except Exception:
+                    pass
+        return False
 
 def group(gid):
     gid = str(gid)
@@ -681,6 +702,43 @@ def save_group(gid):
         except Exception:
             pass
         _maybe_commit()
+
+def user_clear(gid, qq):
+    """彻底清除单用户在指定群的全部底层数据（钱包、账户、群组数据）"""
+    gid_s = str(gid).strip()
+    qq_s = str(qq).strip()
+    if not (gid_s.isdigit() and qq_s.isdigit()):
+        return False
+    gid_i = int(gid_s)
+    qq_i = int(qq_s)
+    with _LOCK:
+        # 1. 彻底清除账户内存缓存与脏标记
+        for k in ((gid_s, qq_s), (gid_i, qq_i), (gid_s, qq_i), (gid_i, qq_s)):
+            a = _ACC_CACHE.pop(k, None)
+            if a is not None:
+                a.dirty = False
+                a.kv.clear()
+
+        # 2. 清除群成员内存缓存
+        for g_k in (gid_s, gid_i):
+            g = _GROUP_CACHE.get(g_k)
+            if g is not None:
+                g._users.pop(qq_s, None)
+                g._users.pop(qq_i, None)
+                if hasattr(g, "_dirty_qqs") and isinstance(g._dirty_qqs, set):
+                    g._dirty_qqs.discard(qq_s)
+                    g._dirty_qqs.discard(qq_i)
+
+        # 3. 彻底删除 SQLite 数据库三表数据并强制落盘
+        if _DB is not None:
+            try:
+                _DB.execute("DELETE FROM wallet WHERE gid=? AND qq=?", (gid_i, qq_i))
+                _DB.execute("DELETE FROM accounts WHERE gid=? AND qq=?", (gid_i, qq_i))
+                _DB.execute("DELETE FROM groups WHERE gid=? AND qq=?", (gid_i, qq_i))
+                _force_commit()
+            except Exception:
+                pass
+    return True
 
 # ==================== 6. 业务扩展：红包 / kv ====================
 def redpack_put(gid, qq, pwd, amount):

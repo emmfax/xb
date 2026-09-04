@@ -1289,11 +1289,11 @@ function renderUserTable() {
         <td>${inp("jj", u.lottery_tickets, 58)}</td>
         <td>${inp("ck", u.deposit || 0, 135)}</td>
         <td><span class="badge badge-success">${u.sign || 0}次</span></td>
-        <td style="white-space:nowrap"><button data-save="user" data-qq="${esc(u.qq)}" data-gid="${esc(u.gid)}" class="sm">保存</button> <button class="ghost sm" data-export="user" data-qq="${esc(u.qq)}" data-gid="${esc(u.gid)}">导出</button></td>
+        <td style="white-space:nowrap"><button data-save="user" data-qq="${esc(u.qq)}" data-gid="${esc(u.gid)}" class="sm">保存</button> <button class="ghost sm" data-export="user" data-qq="${esc(u.qq)}" data-gid="${esc(u.gid)}">导出</button> <button class="ghost sm del" data-clear="user" data-qq="${esc(u.qq)}" data-gid="${esc(u.gid)}" title="彻底清除该用户全部数据（含奴隶、精灵与礼包资格）">清除</button></td>
       </tr>`;
     })
     .join("");
-  // 绑定单用户导出 (保存已通过 userBody 事件委托绑定)
+  // 绑定单用户导出与清除 (保存已通过 userBody 事件委托绑定)
   body.querySelectorAll("[data-export]").forEach((b) => {
     b.addEventListener("click", async () => {
       try {
@@ -1306,6 +1306,60 @@ function renderUserTable() {
       } catch (e) { toast("导出失败: " + e.message, "bad"); }
     });
   });
+  body.querySelectorAll("[data-clear='user']").forEach((b) => {
+    b.addEventListener("click", () => {
+      clearUserSingle(b.dataset.qq, b.dataset.gid);
+    });
+  });
+}
+
+async function clearUserSingle(qq, gid) {
+  qq = String(qq || "").trim();
+  gid = String(gid || "").trim();
+  if (!qq || !gid) return;
+  const ok = confirm(
+    `⚠️ 危险操作确认\n\n` +
+    `确定要彻底清除用户【${qq}】（群: ${gid}）的所有数据吗？\n\n` +
+    `将一并清除以下内容：\n` +
+    `1. 钱包金币、银行存款、体力、魅力、奖券与签到记录\n` +
+    `2. 奴隶系统：解除奴隶身份，且其名下持有的奴隶将全部释放自由\n` +
+    `3. 精灵系统：拥有的所有精灵、出战骑乘状态与背包道具全部清除\n` +
+    `4. 重置新手礼包与精灵领养状态（该用户可重新领取新手礼包）\n\n` +
+    `此操作立即生效且不可逆，是否确定清除？`
+  );
+  if (!ok) return;
+
+  try {
+    toast("正在清理用户数据...", "info");
+    const res = await getBridge().apiPost("user/clear", { gid, qq });
+    if (res && res.ok) {
+      toast(res.msg || `用户 ${qq} 数据已彻底清除`, "ok");
+      await loadUsers();
+      if (typeof loadSlaveUsers === "function") try { loadSlaveUsers(); } catch(e) {}
+      if (typeof loadSpiritUsers === "function") try { loadSpiritUsers(); } catch(e) {}
+    } else {
+      toast((res && (res.msg || res.error)) || "清除失败", "bad");
+    }
+  } catch (e) {
+    toast("清除失败: " + e.message, "bad");
+  }
+}
+
+async function clearUserManual() {
+  const curGid = (document.getElementById("userGidFilter")?.value || USER_GID_FILTER || "").trim();
+  const qq = prompt("请输入要彻底清除数据的用户 QQ 号：");
+  if (!qq || !qq.trim()) return;
+  const targetQq = qq.trim();
+  let targetGid = curGid;
+  if (!targetGid) {
+    const gInput = prompt(`请输入用户【${targetQq}】所在的群号：`, "");
+    if (!gInput || !gInput.trim()) {
+      toast("已取消操作：必须提供群号", "bad");
+      return;
+    }
+    targetGid = gInput.trim();
+  }
+  await clearUserSingle(targetQq, targetGid);
 }
 
 async function saveUserEdit(qq, gid, btn) {
@@ -2997,6 +3051,7 @@ document.addEventListener("click", (e) => {
     if (btn.id === "btnUsersExport") { exportAllUsers(); return; }
     if (btn.id === "btnUsersImport") { importAllUsers(); return; }
     if (btn.id === "btnUsersCleanLeft") { cleanLeftUsers(); return; }
+    if (btn.id === "btnUserClearManual") { clearUserManual(); return; }
     if (btn.id === "btnUsers") { loadUsers(); return; }
     if (btn.id === "btnImgExport") { exportImages(); return; }
   }
@@ -3073,6 +3128,7 @@ document.getElementById("btnLegacyPick")?.addEventListener("click", () => {
 document.getElementById("btnUsersExport")?.addEventListener("click", exportAllUsers);
 document.getElementById("btnUsersImport")?.addEventListener("click", importAllUsers);
 document.getElementById("btnUsersCleanLeft")?.addEventListener("click", cleanLeftUsers);
+document.getElementById("btnUserClearManual")?.addEventListener("click", clearUserManual);
 
 // 启动主逻辑
 if (document.readyState === "loading") {

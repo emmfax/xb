@@ -20,7 +20,7 @@ MENU = (
     "━━━━━━━━━━━━━━\r\n"
     "📇 群列表　📊 应用统计　🔖 小白版本\r\n"
     "💸 扣钱 @QQ 金额　💳 充钱 @QQ 金额\r\n"
-    "🧹 清空财富/体力/魅力/账户/精灵 @QQ\r\n"
+    "🧹 清空财富/体力/魅力/账户/精灵/用户 @QQ\r\n"
     "🔨 禁言 @QQ 分钟　🚪 踢人 @QQ\r\n"
     "💾 备份xb　（立即备份全量数据）\r\n"
     "🛠️ 开启维护　关闭维护　维护信息 内容\r\n"
@@ -241,9 +241,9 @@ def _clear_field(gid, t, field, label):
 
 def cmd_clear(gid, qq, arg):
     arg = (arg or "").strip()
-    m = re.match(r"^清空(财富|体力|魅力|账户|精灵)\s*(.*)$", arg)
+    m = re.match(r"^(?:清空|重置)(财富|体力|魅力|账户|精灵|用户)\s*(.*)$", arg)
     if not m:
-        return "格式：清空{财富/体力/魅力/账户/精灵} @QQ"
+        return "格式：清空{财富/体力/魅力/账户/精灵/用户} @QQ"
     kind = m.group(1)
     rest = m.group(2).strip()
     t = None
@@ -262,7 +262,7 @@ def cmd_clear(gid, qq, arg):
         if m_qq:
             t = m_qq.group(1)
     if not t:
-        return "格式：清空{财富/体力/魅力/账户/精灵} @QQ"
+        return "格式：清空{财富/体力/魅力/账户/精灵/用户} @QQ"
     if kind == "财富":
         return _clear_money(gid, t)
     if kind in ("体力", "stamina"):
@@ -280,6 +280,24 @@ def cmd_clear(gid, qq, arg):
         a.set("spirits", "{}")
         ST.acct_save(gid, t)
         return f"已清空 <{_name(t)}> 的精灵。"
+    if kind == "用户":
+        # 1. 清空底层存储与三表数据 (wallet, accounts, groups)
+        if hasattr(ST, "user_clear"):
+            ST.user_clear(gid, t)
+        else:
+            a = _acct(gid, t)
+            a.kv.clear()
+            ST.acct_save(gid, t)
+            _clear_money(gid, t)
+        # 2. 清空奴隶与释放名下奴隶
+        try:
+            from engines import slave as _sl
+            if hasattr(_sl, "clear_user_slave"):
+                _sl.clear_user_slave(gid, t)
+        except Exception:
+            pass
+        ST.flush_all()
+        return f"已彻底清空 <{_name(t)}> 的所有数据（包含奴隶、精灵与礼包状态，可重新领取新手礼包）。"
     return "未知操作。"
 
 
@@ -394,7 +412,7 @@ def _version():
         return f"小白版本：未知（{e}）"
 
 # ---- 统一入口（测试指令仅超管，WebUI可配但不显示于MENU，已删 个人信息） ----
-_ADMIN_CMDS = ("群列表", "应用统计", "扣钱", "充钱", "清空", "禁言", "踢人", "备份xb", "备份", "开启维护", "关闭维护", "维护信息", "小白版本", "检查更新", "小白升级", "小白更新", "测试testxb", "测试testxb1", "测试testxb2", "测试testxb3", "测试testxb4", "测试testxb5", "测试testxb6", "测试testxb7", "测试testxb8", "超管列表")
+_ADMIN_CMDS = ("群列表", "应用统计", "扣钱", "充钱", "清空", "重置", "禁言", "踢人", "备份xb", "备份", "开启维护", "关闭维护", "维护信息", "小白版本", "检查更新", "小白升级", "小白更新", "测试testxb", "测试testxb1", "测试testxb2", "测试testxb3", "测试testxb4", "测试testxb5", "测试testxb6", "测试testxb7", "测试testxb8", "超管列表")
 
 
 def handle(gid, qq, raw, is_admin=False):
@@ -421,7 +439,7 @@ def handle(gid, qq, raw, is_admin=False):
         return cmd_deduct(gid, qq, text[2:].strip())
     if text.startswith("充钱"):
         return cmd_recharge(gid, qq, text[2:].strip())
-    if text.startswith("清空"):
+    if text.startswith("清空") or text.startswith("重置"):
         return cmd_clear(gid, qq, text)
     if text.startswith("禁言"):
         return cmd_mute(gid, qq, text[2:].strip())

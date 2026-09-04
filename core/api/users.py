@@ -540,6 +540,69 @@ async def handle_users_clean_left(request, context=None):
     })
 
 
+async def handle_user_clear(request):
+    """清除指定单用户的全部数据（钱包、账户、奴隶、精灵、新手礼包资格）"""
+    gid = _extract_param(request, "gid", "").strip()
+    qq = _extract_param(request, "qq", "").strip()
+    if not gid or not qq:
+        try:
+            p = await get_req_json(request, default={})
+            if isinstance(p, dict):
+                if not gid and p.get("gid"):
+                    gid = str(p.get("gid")).strip()
+                if not qq and p.get("qq"):
+                    qq = str(p.get("qq")).strip()
+        except Exception:
+            pass
+
+    if not gid or not qq:
+        return _err("gid and qq required", 400)
+    if not (gid.isdigit() and qq.isdigit()):
+        return _err("gid and qq must be digits", 400)
+
+    try:
+        # 1. 底层存储与三表数据清除 (wallet, accounts, groups)
+        if hasattr(ST, "user_clear"):
+            ST.user_clear(gid, qq)
+        else:
+            if ST._DB is not None:
+                ST._DB.execute("DELETE FROM wallet WHERE gid=? AND qq=?", (int(gid), int(qq)))
+                ST._DB.execute("DELETE FROM accounts WHERE gid=? AND qq=?", (int(gid), int(qq)))
+                ST._DB.execute("DELETE FROM groups WHERE gid=? AND qq=?", (int(gid), int(qq)))
+
+        # 2. 奴隶系统清理：解除奴隶身份并释放名下奴隶
+        try:
+            if hasattr(slave, "clear_user_slave"):
+                slave.clear_user_slave(gid, qq)
+            else:
+                st = slave.state(gid)
+                if hasattr(st, "remove_section"):
+                    st.remove_section(qq)
+                for sec in st.sections():
+                    if str(sec) == qq:
+                        continue
+                    u = st[sec]
+                    if str(u.get("owner", "")) == qq:
+                        u["owner"] = ""
+                        u["purchase_price"] = "0"
+                        u["purchase_time"] = ""
+                slave.save(gid)
+        except Exception:
+            pass
+
+        # 3. 强制刷写保证落盘
+        ST.flush_all()
+        return json_response({
+            "ok": True,
+            "gid": gid,
+            "qq": qq,
+            "msg": f"用户 {qq} 数据已彻底清除（包含奴隶、精灵与新手礼包）"
+        })
+    except Exception as e:
+        return _err(f"clear failed: {e}", 500)
+
+
+
 async def handle_users_airdrop(request):
     """批量全员/定向群福利空投分发"""
     try:
