@@ -162,8 +162,14 @@ def cmd_personal(gid, qq):
     jq = a.int("lottery_tickets")
     sign_c = a.int("sign_count")
     coin = ST.coin_name()
+    disp = str(qq)
+    try:
+        from . import slave as _sl_name
+        disp = _sl_name.NOTE_NAMES.get(str(qq), str(qq)) or str(qq)
+    except Exception:
+        pass
     lines = [
-        f"📋【{qq}】的档案",
+        f"📋【{disp}】的档案",
         f"💰资产：{money}{coin}｜🏦存款：{dep}｜💎身价：500",
         f"🔋体力：{tili}｜💄魅力：{meili}｜🎫奖券：{jq}｜📖经验：0",
         f"👑主人：木有主人｜无人保护｜📅总签{sign_c}·连签{a.int('consecutive_days')}天",

@@ -355,8 +355,14 @@ def _clean_expired_game(gid, max_seconds=180):
                 ST.recall_set(f"chain_used_{gid}", "")
                 ST.recall_set(f"chain_last_qq_{gid}", "")
                 ST.recall_set(f"chain_last_time_{gid}", "")
+                ST.recall_set(f"chain_owner_{gid}", "")
+                ST.recall_set(f"chain_players_{gid}", "")
+                ST.recall_set(f"chain_start_{gid}", "")
             elif kind == "game24":
                 ST.recall_set(f"game24_{gid}_{owner}", "")
+                ST.recall_set(f"game24_players_{gid}", "")
+                ST.recall_set(f"game24_start_{gid}", "")
+                ST.recall_set(f"game24_owner_{gid}", "")
             _clear_active_game(gid)
             return True
     except Exception:
@@ -534,6 +540,8 @@ def handle(gid, qq, raw):
     text = (raw or "").strip()
     if not text:
         return None
+    # 自动检查并清理群内闲置超时或异常遗留的游戏锁
+    _clean_expired_game(gid)
     if text in ST.wake("娱乐系统", "娱乐系统"):
         return _MENU
     if text.startswith("抽签"):
@@ -857,8 +865,9 @@ def _play(gid, qq, text):
         if not owner:
             continue
         try:
-            start_ts = int(S.recall_get(f"{kind}_start_{gid}", "0") or "0")
-            if start_ts > 0 and (int(time.time()) - start_ts) > 180:
+            start_val = S.recall_get(f"{kind}_start_{gid}", "0")
+            start_ts = int(start_val or "0")
+            if start_ts <= 0 or (int(time.time()) - start_ts) > 180:
                 S.recall_set(f"{kind}_{gid}_{owner}", "")
                 S.recall_set(f"{kind}_owner_{gid}", "")
                 S.recall_set(f"{kind}_players_{gid}", "")
@@ -891,8 +900,9 @@ def _play(gid, qq, text):
     owner = S.recall_get(f"guessnum_owner_{gid}")
     if owner:
         try:
-            start_ts = int(S.recall_get(f"guessnum_start_{gid}", "0") or "0")
-            if start_ts > 0 and (int(time.time()) - start_ts) > 180:
+            start_val = S.recall_get(f"guessnum_start_{gid}", "0")
+            start_ts = int(start_val or "0")
+            if start_ts <= 0 or (int(time.time()) - start_ts) > 180:
                 S.recall_set(f"guessnum_{gid}_{owner}", "")
                 S.recall_set(f"guessnum_owner_{gid}", "")
                 S.recall_set(f"guessnum_players_{gid}", "")
@@ -921,8 +931,9 @@ def _play(gid, qq, text):
     owner = S.recall_get(f"game24_owner_{gid}")
     if owner:
         try:
-            start_ts = int(S.recall_get(f"game24_start_{gid}", "0") or "0")
-            if start_ts > 0 and (int(time.time()) - start_ts) > 180:
+            start_val = S.recall_get(f"game24_start_{gid}", "0")
+            start_ts = int(start_val or "0")
+            if start_ts <= 0 or (int(time.time()) - start_ts) > 180:
                 S.recall_set(f"game24_{gid}_{owner}", "")
                 S.recall_set(f"game24_owner_{gid}", "")
                 S.recall_set(f"game24_players_{gid}", "")
@@ -1005,13 +1016,13 @@ def _play(gid, qq, text):
         last = S.recall_get(f"chain_{gid}", "")
         start = S.recall_get(f"chain_start_{gid}", "0")
         try:
-            if int(time.time()) - int(start) > 180:
-                S.recall_set(f"chain_owner_{gid}", "")
-                S.recall_set(f"chain_{gid}", "")
-                S.recall_set(f"ent_game_{gid}", "")
+            start_ts = int(start or "0")
+            if start_ts <= 0 or (int(time.time()) - start_ts) > 180:
+                _clean_expired_game(gid, max_seconds=0)
                 return "接龙超时结束~"
         except Exception:
-            pass
+            _clean_expired_game(gid, max_seconds=0)
+            return "接龙超时结束~"
         if not _is_player(gid, qq, "chain"):
             # 仅当用户尝试接龙（2-6字且首字接尾字）才提醒
             if text and 2 <= len(text) <= 6 and not text.startswith(("开始", "加入", "退出")) and last and text[0] == last[-1]:

@@ -108,7 +108,7 @@ def _raw_file_response(data_bytes, filename):
 PLUGIN_ID = "astrbot_plugin_xbbot"
 PLUGIN_DESC = "小白(奴/签/银/娱/私/灵/骑/超管/帮派/冒险+主菜单+WebUI), 现代SQLite存储"
 PLUGIN_AUTHOR = "Light"
-PLUGIN_VERSION = "0.68.14"
+PLUGIN_VERSION = "0.68.15"
 PLUGIN_REPO = "https://github.com/emmfax/xb"
 
 # 复用 router 的主菜单，保持单源
@@ -135,9 +135,14 @@ def handle(gid, qq, raw, is_private=False, is_admin=False):
         if _router_layer and hasattr(_router_layer, "handle"):
             engines = {"slave": slave, "sign": sign, "bank": bank, "ent": ent, "spirit": spirit, "ride": ride, "guild": guild, "adventure": adventure, "chat": chat, "superadmin": superadmin}
             return _router_layer.handle(gid, qq, raw, is_private=is_private, is_admin=is_admin, store=ST, engines=engines, chat_mod=chat, superadmin_mod=superadmin)
-    except Exception:
-        pass
-    # 回退：旧逻辑（不应触发）
+    except Exception as e:
+        import traceback
+        if _logger_layer:
+            try:
+                _logger_layer.error(f"main.handle 异常: {e}\n{traceback.format_exc()}")
+            except Exception:
+                pass
+        return f"系统处理异常，请稍后重试（{e}）"
     return None
 
 

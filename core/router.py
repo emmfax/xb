@@ -345,41 +345,68 @@ def handle(gid, qq, raw, is_private=False, is_admin=False, store=None, engines=N
             fn = engines.get(_eng)
             if not fn:
                 continue
+            matched = _matches_engine(raw, _eng, store)
             g = _batch_map.get(_eng) if _batch_map else (_guard(gid, _eng, is_admin, raw, store) if store else None)
             if g:
-                if _matches_engine(raw, _eng, store):
+                if matched:
                     return g
                 continue
             try:
                 r = fn.handle(gid, qq, raw) if hasattr(fn, "handle") else fn(gid, qq, raw)
-            except Exception:
+            except Exception as e:
+                import traceback
+                err_tb = traceback.format_exc()
+                try:
+                    from .logger import error as _log_err
+                    _log_err(f"[{_eng}] handle异常: {e}\n{err_tb}")
+                except Exception:
+                    pass
+                # 若消息明确匹配该系统指令却执行崩溃，绝不可静默吞掉！向用户反馈错误提示
+                if matched:
+                    sysname = _SYS_ENG.get(_eng, _eng)
+                    return f"【{sysname}系统】处理指令时出现异常，请稍后重试（原因: {e}）"
                 r = None
             if r:
                 return apply_reply_override(raw, r, store)
     # 超管（复用同一批量map）
+    matched_admin = _matches_engine(raw, "superadmin", store)
     if engines and superadmin_mod:
         g = _batch_map.get("superadmin") if _batch_map else (_guard(gid, "superadmin", is_admin, raw, store) if store else None)
         if g:
-            if _matches_engine(raw, "superadmin", store):
+            if matched_admin:
                 return g
         else:
             try:
                 r = superadmin_mod.handle(gid, qq, raw, is_admin)
                 if r:
                     return apply_reply_override(raw, r, store)
-            except Exception:
-                pass
+            except Exception as e:
+                import traceback
+                try:
+                    from .logger import error as _log_err
+                    _log_err(f"[superadmin] handle异常: {e}\n{traceback.format_exc()}")
+                except Exception:
+                    pass
+                if matched_admin:
+                    return f"【超管系统】处理指令时出现异常，请稍后重试（原因: {e}）"
     elif engines and "superadmin" in engines:
         fn = engines["superadmin"]
         g = _batch_map.get("superadmin") if _batch_map else (_guard(gid, "superadmin", is_admin, raw, store) if store else None)
         if g:
-            if _matches_engine(raw, "superadmin", store):
+            if matched_admin:
                 return g
         else:
             try:
                 r = fn.handle(gid, qq, raw, is_admin) if hasattr(fn, "handle") else fn(gid, qq, raw, is_admin)
                 if r:
                     return apply_reply_override(raw, r, store)
-            except Exception:
-                pass
+            except Exception as e:
+                import traceback
+                try:
+                    from .logger import error as _log_err
+                    _log_err(f"[superadmin] handle异常: {e}\n{traceback.format_exc()}")
+                except Exception:
+                    pass
+                if matched_admin:
+                    return f"【超管系统】处理指令时出现异常，请稍后重试（原因: {e}）"
     return None

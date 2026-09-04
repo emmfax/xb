@@ -537,9 +537,15 @@ def cmd_rob_zone(gid, qq):
     ok, mins = _cd(a, "rob_bank_time", ST.cfgi("银行配置", "打劫银行间隔", 10), "打劫银行")
     if not ok:
         return f"{mins}分钟后再来打劫银行吧！"
-    wins = [q for q in (r[0] for r in ST._DB.execute(
-        "SELECT DISTINCT qq FROM wallet WHERE gid=?", (int(gid),)).fetchall())
-        if str(q) != str(qq)]
+    wins = []
+    try:
+        ST._ensure_db()
+        if ST._DB is not None:
+            wins = [q for q in (r[0] for r in ST._DB.execute(
+                "SELECT DISTINCT qq FROM wallet WHERE gid=?", (int(gid),)).fetchall())
+                if str(q) != str(qq)]
+    except Exception:
+        wins = []
     if not wins:
         return "银行金库暂时空虚，打劫失败，下次再来！"
     prob = ST.cfgi("银行配置", "打劫银行成功概率", 70)

@@ -270,9 +270,27 @@ def wake(sysname, default):
         pass
     return lst
 
+# ==================== 2.5 数据库连接自愈机制 ====================
+def _ensure_db():
+    global _DB, _DB_PATH
+    if _DB is not None:
+        return _DB
+    with _LOCK:
+        if _DB is not None:
+            return _DB
+        try:
+            base = os.path.dirname(os.path.abspath(__file__))
+            cand = _PERSISTENT_DATA_DIR or (get_persistent_data_dir(base) if 'get_persistent_data_dir' in globals() else os.path.join(base, "data"))
+            p = os.path.join(cand, "xb.db")
+            init(p)
+        except Exception:
+            pass
+        return _DB
+
 # ==================== 3. 钱包层 ====================
 def coins_get(gid, qq):
     # 读不加全局锁，利用 WAL 并发读，写由 _LOCK 串行
+    _ensure_db()
     if _DB is None:
         return 0
     try:
@@ -288,6 +306,7 @@ def coins_get(gid, qq):
             return int(row[0]) if row else 0
 
 def coins_add(gid, qq, delta):
+    _ensure_db()
     with _LOCK:
         if _DB is None:
             return 0
@@ -308,6 +327,7 @@ def coins_add(gid, qq, delta):
 
 def txn_coins_acct(gid, qq, delta_coins=0, acct_updates=None):
     """原子事务：钱包 delta + 账户 kv 批量更新，同持 _LOCK 一次提交"""
+    _ensure_db()
     if acct_updates is None:
         acct_updates = {}
     with _LOCK:
@@ -407,6 +427,7 @@ def acct(gid, qq):
             if a is not None:
                 return a
         kv = {}
+        _ensure_db()
         if _DB is not None:
             # DB 读仍用 _DB_LOCK 避免与写冲突（千群并发读 WAL 可并行，写串行）
             row = _DB.execute("SELECT data FROM accounts WHERE gid=? AND qq=?",
@@ -581,6 +602,7 @@ def group(gid):
             if g is not None:
                 return g
         users = {}
+        _ensure_db()
         if _DB is not None:
             rows = _DB.execute(
                 "SELECT qq, data FROM groups WHERE gid=?", (int(gid),)).fetchall()
@@ -676,6 +698,7 @@ def group_user(gid, qq):
 
 def save_group(gid):
     gid = str(gid)
+    _ensure_db()
     with _LOCK:
         g = _GROUP_CACHE.get(gid)
         if g is None or _DB is None:
@@ -711,6 +734,7 @@ def user_clear(gid, qq):
         return False
     gid_i = int(gid_s)
     qq_i = int(qq_s)
+    _ensure_db()
     with _LOCK:
         # 1. 彻底清除账户内存缓存与脏标记
         for k in ((gid_s, qq_s), (gid_i, qq_i), (gid_s, qq_i), (gid_i, qq_s)):
@@ -742,17 +766,31 @@ def user_clear(gid, qq):
 
 # ==================== 6. 业务扩展：红包 / kv ====================
 def redpack_put(gid, qq, pwd, amount):
+    _ensure_db()
     with _LOCK:
-        _DB.execute("DELETE FROM redpacks WHERE gid=? AND pwd=?", (int(gid), str(pwd)))
-        _DB.execute("DELETE FROM redpacks WHERE ts < ?", (int(time.time()) - 86400,))
-        _DB.execute("INSERT INTO redpacks(gid, qq, pwd, amount, ts) VALUES(?,?,?,?,?)",
-                    (int(gid), int(qq), str(pwd), int(amount), int(time.time())))
-        _DB.commit()
+        if _DB is None:
+            return False
+        try:
+            _DB.execute("DELETE FROM redpacks WHERE gid=? AND pwd=?", (int(gid), str(pwd)))
+            _DB.execute("DELETE FROM redpacks WHERE ts < ?", (int(time.time()) - 86400,))
+            _DB.execute("INSERT INTO redpacks(gid, qq, pwd, amount, ts) VALUES(?,?,?,?,?)",
+                        (int(gid), int(qq), str(pwd), int(amount), int(time.time())))
+            _DB.commit()
+            return True
+        except Exception:
+            return False
 
 def redpack_get(gid, pwd):
-    return _DB.execute(
-        "SELECT qq, amount FROM redpacks WHERE gid=? AND pwd=?",
-        (int(gid), str(pwd))).fetchone()
+    _ensure_db()
+    with _LOCK:
+        if _DB is None:
+            return None
+        try:
+            return _DB.execute(
+                "SELECT qq, amount FROM redpacks WHERE gid=? AND pwd=?",
+                (int(gid), str(pwd))).fetchone()
+        except Exception:
+            return None
 
 # ==================== 7. 初始化 / 落盘 / 迁移 ====================
 _PERSISTENT_DATA_DIR = ""
@@ -1142,22 +1180,6 @@ def maybe_auto_backup():
     return backup_user_data(force=False)
 
 # ==================== 10. kv ====================
-def _ensure_db():
-    global _DB, _DB_PATH
-    if _DB is not None:
-        return _DB
-    with _LOCK:
-        if _DB is not None:
-            return _DB
-        try:
-            base = os.path.dirname(os.path.abspath(__file__))
-            cand = _PERSISTENT_DATA_DIR or get_persistent_data_dir(base)
-            p = os.path.join(cand, "xb.db")
-            init(p)
-        except Exception:
-            pass
-        return _DB
-
 def recall_set(k, v):
     _ensure_db()
     with _LOCK:
@@ -1187,6 +1209,7 @@ def txn_two_wallets(gid, src_qq, dst_qq, amount):
         return False
     if str(src_qq) == str(dst_qq):
         return False
+    _ensure_db()
     with _LOCK:
         if _DB is None:
             return False
@@ -1205,6 +1228,7 @@ def txn_two_wallets(gid, src_qq, dst_qq, amount):
 
 def rank_batch(gid, field="money", topn=500):
     """统一批量排行：wallet+accounts 单次查询，去 N+1；field: money/sign/stamina/charm/deposit"""
+    _ensure_db()
     if _DB is None:
         return []
     try:

@@ -1633,7 +1633,7 @@ def _route_locked(gid, qq, raw):
                 for _uid in st.users():
                     _unm = uget(U(st, _uid), "name")
                     clean_unm = _re.sub(r"[\[\]【】\(\)\s]", "", str(_unm or ""))
-                    if clean_unm and (clean_unm == clean_nm or clean_nm in clean_unm or clean_unm in clean_rest if 'clean_rest' in locals() else clean_unm == clean_nm or clean_nm in clean_unm or clean_unm in clean_nm):
+                    if clean_unm and (clean_unm == clean_nm or clean_nm in clean_unm or clean_unm in clean_nm):
                         target = str(_uid)
                         text = text.replace(m.group(0), "", 1).strip()
                         break
@@ -1686,7 +1686,7 @@ def _route_locked(gid, qq, raw):
         return cmd_myinfo(gid, qq, st)
     if text.startswith("查询"):
         # 特殊别名：查询更新 / 查询版本 -> 转发到更新检测
-        if text.startswith("查询更新") or text.startswith("查询版本") or text.startswith("查询 版本"):
+        if text.startswith(("查询更新", "查询版本", "查询 版本")):
             try:
                 from . import superadmin
                 return superadmin.handle(gid, qq, "检查更新", is_admin=True)
@@ -1696,6 +1696,20 @@ def _route_locked(gid, qq, raw):
                     return superadmin.handle(gid, qq, "检查更新", is_admin=True)
                 except Exception:
                     pass
+        # 查询维护 -> 转发到超管维护查询
+        if text.startswith(("查询维护", "查询 维护")):
+            try:
+                from . import superadmin
+                return superadmin.handle(gid, qq, "查看维护", is_admin=True)
+            except Exception:
+                try:
+                    import superadmin
+                    return superadmin.handle(gid, qq, "查看维护", is_admin=True)
+                except Exception:
+                    pass
+        # 其他系统指令前缀放行（查询坐骑 / 查询精灵 / 查询帮派 / 查询冒险 / 查询地图），避免截胡
+        if text.startswith(("查询坐骑", "查询 坐骑", "查询精灵", "查询 精灵", "查询帮派", "查询 帮派", "查询冒险", "查询 冒险", "查询地图", "查询 菜单")):
+            return None
         # 查询 (不带参数) / 查询我 / 查询自己 -> 直接查看自己的档案
         rest = text[len("查询"):].strip()
         if not target and (not rest or rest in ("我", "自己", "个人", "我的信息", "自己信息", "个人信息")):
