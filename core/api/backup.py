@@ -243,14 +243,14 @@ async def handle_db_doctor(request, plugin_base=""):
         except Exception:
             pass
 
-        # 2. 统计体检前数据库与 WAL 文件大小
-        db_path = getattr(ST, "_DB_PATH", None) or os.path.join(plugin_base or _backup_base(plugin_base), "..", "xbbot.db")
+        db_path = getattr(ST, "_DB_PATH", None) or os.path.join(plugin_base or _backup_base(plugin_base), "..", "xb.db")
         if not os.path.isfile(db_path):
-            # 兼容默认 data/xbbot.db 或 data/nuli_slave.db
+            # 兼容默认 data/xb.db 或 data/nuli_slave.db / xbbot.db
             cands = [
+                os.path.join(os.path.dirname(_backup_base(plugin_base)), "xb.db"),
                 os.path.join(os.path.dirname(_backup_base(plugin_base)), "nuli_slave.db"),
-                os.path.join(os.path.dirname(_backup_base(plugin_base)), "data.db"),
-                os.path.join(os.path.dirname(_backup_base(plugin_base)), "xbbot.db")
+                os.path.join(os.path.dirname(_backup_base(plugin_base)), "xbbot.db"),
+                os.path.join(os.path.dirname(_backup_base(plugin_base)), "data.db")
             ]
             for c in cands:
                 if os.path.isfile(c):

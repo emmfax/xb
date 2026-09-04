@@ -711,7 +711,7 @@ def set_persistent_data_dir(path):
     _PERSISTENT_DATA_DIR = path
     base = os.path.dirname(os.path.abspath(__file__))
     _auto_migrate_and_heal(path, base)
-    target_db = os.path.join(path, "nuli_slave.db")
+    target_db = os.path.join(path, "xb.db")
     with _LOCK:
         if _DB is not None and _DB_PATH and _DB_PATH != target_db:
             try:
@@ -736,18 +736,25 @@ def _auto_migrate_and_heal(cand, base):
         return
     try:
         import shutil
-        cand_db = os.path.join(cand, "nuli_slave.db")
+        cand_db = os.path.join(cand, "xb.db")
+        cand_nuli = os.path.join(cand, "nuli_slave.db")
         cand_xbbot = os.path.join(cand, "xbbot.db")
-        # 兼容 xbbot.db 自动更名为规范 nuli_slave.db
-        if not os.path.isfile(cand_db) and os.path.isfile(cand_xbbot):
-            try:
-                shutil.copy2(cand_xbbot, cand_db)
-            except Exception:
-                pass
+        # 兼容历史库名自动平滑迁入标准 xb.db
+        if not os.path.isfile(cand_db):
+            if os.path.isfile(cand_nuli):
+                try:
+                    shutil.copy2(cand_nuli, cand_db)
+                except Exception:
+                    pass
+            elif os.path.isfile(cand_xbbot):
+                try:
+                    shutil.copy2(cand_xbbot, cand_db)
+                except Exception:
+                    pass
         # 插件根目录下旧数据自愈迁移到持久化目录（绝不反向覆盖已存在的有效用户数据）
-        for f in ("nuli_slave.db", "xbbot.db", "config.json", "events.json"):
+        for f in ("xb.db", "nuli_slave.db", "xbbot.db", "config.json", "events.json"):
             src_f = os.path.join(base, "data", f)
-            dst_f = os.path.join(cand, f)
+            dst_f = os.path.join(cand, "xb.db" if f.endswith(".db") else f)
             if os.path.isfile(src_f) and not os.path.isfile(dst_f):
                 try:
                     shutil.copy2(src_f, dst_f)
