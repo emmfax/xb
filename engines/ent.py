@@ -315,7 +315,48 @@ def _clear_active_game(gid):
         pass
 
 
+_GAME_KIND_MAP = {
+    "接龙": "chain",
+    "急转弯": "trick",
+    "猜字谜": "miri",
+    "字谜": "miri",
+    "猜数": "guessnum",
+    "答题": "quiz",
+    "二四点": "game24",
+}
+
+
+def _clean_expired_game(gid, max_seconds=180):
+    """自动清理超时闲置的会话游戏锁，避免单群永久卡死"""
+    cur = _active_game(gid)
+    if not cur:
+        return False
+    kind = _GAME_KIND_MAP.get(cur)
+    if not kind:
+        return False
+    try:
+        start_val = ST.recall_get(f"{kind}_start_{gid}", "0")
+        start_ts = int(start_val or "0")
+        if start_ts > 0 and (int(time.time()) - start_ts) > max_seconds:
+            owner = ST.recall_get(f"{kind}_owner_{gid}", "")
+            ST.recall_set(f"{kind}_owner_{gid}", "")
+            ST.recall_set(f"{kind}_players_{gid}", "")
+            ST.recall_set(f"{kind}_start_{gid}", "")
+            if owner:
+                ST.recall_set(f"{kind}_{gid}_{owner}", "")
+            if kind == "chain":
+                ST.recall_set(f"chain_{gid}", "")
+            elif kind == "game24":
+                ST.recall_set(f"game24_{gid}_{owner}", "")
+            _clear_active_game(gid)
+            return True
+    except Exception:
+        pass
+    return False
+
+
 def _check_single_game(gid, new_label):
+    _clean_expired_game(gid)
     cur = _active_game(gid)
     if cur and cur != new_label:
         return f"已有进行中的【{cur}】游戏，请先结束当前游戏再开新局！（发送【退出{cur}】结束）"
@@ -789,6 +830,17 @@ def _play(gid, qq, text):
         owner = S.recall_get(f"{kind}_owner_{gid}")
         if not owner:
             continue
+        try:
+            start_ts = int(S.recall_get(f"{kind}_start_{gid}", "0") or "0")
+            if start_ts > 0 and (int(time.time()) - start_ts) > 180:
+                S.recall_set(f"{kind}_{gid}_{owner}", "")
+                S.recall_set(f"{kind}_owner_{gid}", "")
+                S.recall_set(f"{kind}_players_{gid}", "")
+                S.recall_set(f"{kind}_start_{gid}", "")
+                S.recall_set(f"ent_game_{gid}", "")
+                continue
+        except Exception:
+            pass
         if not _is_player(gid, qq, kind):
             continue
         ans = S.recall_get(f"{kind}_{gid}_{owner}")
@@ -811,6 +863,18 @@ def _play(gid, qq, text):
         return f"答案不对，再想想~（发送【退出{label}】结束）"
     # 猜数(题面存开局者 key, 参与者均可作答; 非参与者/非数字 放行到接龙)
     owner = S.recall_get(f"guessnum_owner_{gid}")
+    if owner:
+        try:
+            start_ts = int(S.recall_get(f"guessnum_start_{gid}", "0") or "0")
+            if start_ts > 0 and (int(time.time()) - start_ts) > 180:
+                S.recall_set(f"guessnum_{gid}_{owner}", "")
+                S.recall_set(f"guessnum_owner_{gid}", "")
+                S.recall_set(f"guessnum_players_{gid}", "")
+                S.recall_set(f"guessnum_start_{gid}", "")
+                S.recall_set(f"ent_game_{gid}", "")
+                owner = None
+        except Exception:
+            pass
     if owner and _is_player(gid, qq, "guessnum"):
         g = S.recall_get(f"guessnum_{gid}_{owner}")
         if g and text.strip().isdigit():
@@ -829,6 +893,18 @@ def _play(gid, qq, text):
             return "📉 小了，再猜！" if v < n else "📈 大了，再猜！"
     # 二四点（群组共享，可加入，30秒内）
     owner = S.recall_get(f"game24_owner_{gid}")
+    if owner:
+        try:
+            start_ts = int(S.recall_get(f"game24_start_{gid}", "0") or "0")
+            if start_ts > 0 and (int(time.time()) - start_ts) > 180:
+                S.recall_set(f"game24_{gid}_{owner}", "")
+                S.recall_set(f"game24_owner_{gid}", "")
+                S.recall_set(f"game24_players_{gid}", "")
+                S.recall_set(f"game24_start_{gid}", "")
+                S.recall_set(f"ent_game_{gid}", "")
+                owner = None
+        except Exception:
+            pass
     if owner:
         # 非参与者：只有发送本次题目数字时才提醒，否则静默（需求18）
         if not _is_player(gid, qq, "game24"):

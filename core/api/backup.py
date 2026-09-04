@@ -84,31 +84,23 @@ async def handle_backups_restore(request, plugin_base=""):
     try:
         import sqlite3
         cur_db = ST._DB
-        try:
-            cur_db.execute("PRAGMA wal_checkpoint(TRUNCATE)")
-            cur_db.commit()
-        except Exception:
-            pass
-        orig_path = None
-        try:
-            orig_path = getattr(ST, "_DB_PATH", None)
-            if not orig_path:
-                orig_path = os.path.join(os.path.dirname(_backup_base(plugin_base)), "xbbot.db")
-        except Exception:
-            pass
-        if orig_path and os.path.isfile(orig_path):
+        with ST._LOCK:
             try:
                 ST.flush_all()
-                cur_db.commit()
             except Exception:
                 pass
-            import shutil
-            shutil.copy2(src, orig_path)
-            return json_response({"ok": True, "path": rel, "note": "已恢复，需重启插件生效"})
-        src_conn = sqlite3.connect(src)
-        cur_db.backup(src_conn)
-        src_conn.close()
-        return json_response({"ok": True, "path": rel})
+            try:
+                cur_db.execute("PRAGMA wal_checkpoint(TRUNCATE)")
+            except Exception:
+                pass
+            cur_db.commit()
+            src_conn = sqlite3.connect(src)
+            src_conn.backup(cur_db)
+            src_conn.close()
+            cur_db.commit()
+            ST._ACC_CACHE.clear()
+            ST._GROUP_CACHE.clear()
+        return json_response({"ok": True, "path": rel, "msg": "备份恢复成功！数据已实时加载生效。"})
     except Exception as e:
         return _err(f"restore failed: {e}", 500)
 

@@ -43,14 +43,14 @@ def handle(qq, raw):
         if not (text.startswith("@") or text.startswith("#")):
             return None
         text = text[1:].strip()
-    # 关键词优先
-    for k, replies in KEYWORDS.items():
-        if k in text:
-            return random.choice(replies)
-    # 黑名单关键字命中发警告
+    # 黑名单关键字优先拦截
     ban = ST.cfg("私聊配置", "黑名单关键字", "")
     if ban and any(x in text for x in ban.split("|") if x):
         return "抱歉，您的消息包含敏感词汇，已被拦截。"
+    # 关键词匹配
+    for k, replies in KEYWORDS.items():
+        if k in text:
+            return random.choice(replies)
     if ST.cfg("私聊配置", "私聊开关", "真") == "真":
         # 轻量随意回复(限频防刷)
         if random.random() < float(ST.cfg("私聊配置", "回复概率", "0.3") or 0.3):
