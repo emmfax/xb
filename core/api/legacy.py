@@ -10,7 +10,7 @@ import zipfile
 
 from astrbot.api.web import json_response
 
-from .helpers import _err
+from .helpers import _err, get_req_query, get_req_json
 
 try:
     from ... import store as ST
@@ -355,7 +355,7 @@ async def handle_import_legacy(req, plugin_base=""):
                 f = None
         if not f:
             try:
-                p = await req.json(default={})  # type: ignore
+                p = await get_req_json(req, default={})
                 if isinstance(p, dict) and p:
                     users = p.get("users")
                     if isinstance(users, list):
@@ -455,7 +455,7 @@ async def handle_import_legacy(req, plugin_base=""):
                     fname = locals().get("_fname_from_multipart", "") or ""
                     if not fname:
                         try:
-                            fname = str(req.query.get("filename") or req.query.get("file") or "").strip()  # type: ignore
+                            fname = str(get_req_query(req, "filename", "") or get_req_query(req, "file", "")).strip()
                         except Exception:
                             pass
                     if not fname:

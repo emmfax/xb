@@ -95,7 +95,7 @@ def _raw_file_response(data_bytes, filename):
 PLUGIN_ID = "astrbot_plugin_xbbot"
 PLUGIN_DESC = "小白(奴/签/银/娱/私/灵/骑/超管/帮派/冒险+主菜单+WebUI), 现代SQLite存储"
 PLUGIN_AUTHOR = "Light"
-PLUGIN_VERSION = "0.68.0"
+PLUGIN_VERSION = "0.68.1"
 PLUGIN_REPO = "https://github.com/emmfax/xb"
 
 # 复用 router 的主菜单，保持单源
@@ -133,9 +133,11 @@ class XbBot(Star):
         super().__init__(context)
         cfg = _normalize_cfg(config) if isinstance(config, dict) and config else _fallback_cfg()
         _BASE = os.path.dirname(os.path.abspath(__file__))
-        db_path = str(cfg.get("网络", {}).get("db_path", "") or "") or os.path.join(_BASE, "data", "xbbot.db")
+        data_dir = ST.get_persistent_data_dir(_BASE) if hasattr(ST, "get_persistent_data_dir") else os.path.join(_BASE, "data")
+        db_path = str(cfg.get("网络", {}).get("db_path", "") or "") or getattr(slave, "DB_PATH", "") or os.path.join(data_dir, "nuli_slave.db")
         ST.init(db_path, cfg)
-        ST.set_config_path(os.path.join(_BASE, "data", "config.json"))
+        ST.set_config_path(os.path.join(data_dir, "config.json"))
+        ST.set_backup_dir(os.path.join(data_dir, "backups"))
         ST.set_astrbot_config(config)
         self._db_path = db_path
         old_db = str(cfg.get("网络", {}).get("merge_from_db", "") or "")

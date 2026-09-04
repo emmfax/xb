@@ -3,7 +3,7 @@
 import json
 from astrbot.api.web import json_response
 
-from .helpers import _err
+from .helpers import _err, get_req_query, get_req_json
 
 try:
     from ... import store as ST
@@ -18,14 +18,11 @@ except ImportError:
 
 async def handle_slave_users(request):
     try:
-        gid = ""
-        try: gid = str(request.query.get("gid") or "").strip()
-        except Exception: gid = ""
+        gid = get_req_query(request, "gid", "").strip()
         if not gid:
-            try:
-                j = await request.json()
-                if isinstance(j, dict) and j.get("gid"): gid = str(j.get("gid")).strip()
-            except Exception: pass
+            j = await get_req_json(request, default={})
+            if isinstance(j, dict) and j.get("gid"):
+                gid = str(j.get("gid")).strip()
 
         default_init_price = ST.cfgi("费用配置", "初始身价", 500) if hasattr(ST, "cfgi") else 500
         if default_init_price <= 0: default_init_price = 500
@@ -120,9 +117,7 @@ async def handle_slave_users(request):
 async def handle_slave_calibrate(request):
     """一键校准全员奴隶身价：将全库所有 <=0 的身价批量修复为最新初始身价"""
     try:
-        data = {}
-        try: data = await request.json()
-        except Exception: pass
+        data = await get_req_json(request, default={})
 
         init_price = int(data.get("price", 0) or 0)
         if init_price <= 0:
@@ -179,18 +174,11 @@ async def handle_slave_calibrate(request):
 
 async def handle_spirit_users(request):
     try:
-        gid = ""
-        try:
-            gid = str(request.query.get("gid") or "").strip()
-        except Exception:
-            gid = ""
+        gid = get_req_query(request, "gid", "").strip()
         if not gid:
-            try:
-                j = await request.json()
-                if isinstance(j, dict) and j.get("gid"):
-                    gid = str(j.get("gid")).strip()
-            except Exception:
-                pass
+            j = await get_req_json(request, default={})
+            if isinstance(j, dict) and j.get("gid"):
+                gid = str(j.get("gid")).strip()
         out = []
         q = "SELECT gid, qq, data FROM accounts"
         args = ()
@@ -278,7 +266,7 @@ async def handle_spirits_get(request):
 
 
 async def handle_spirits_save(request):
-    payload = await request.json(default={})  # type: ignore
+    payload = await get_req_json(request, default={})
     if not isinstance(payload, dict):
         return _err("payload must be dict", 400)
     saved = []

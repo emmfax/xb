@@ -58,35 +58,8 @@ _BASE    = _os.path.dirname(_os.path.dirname(_os.path.abspath(__file__)))  # 插
 _ENG_DIR = _os.path.join(_BASE, "engines")
 
 def _resolve_persistent_data_dir():
-    # 优先检测 AstrBot 官方持久化数据目录 data/plugin_data/astrbot_plugin_xbbot
-    try:
-        parent_plugins = _os.path.dirname(_BASE)
-        if _os.path.basename(parent_plugins) == "plugins":
-            astrbot_data_root = _os.path.dirname(parent_plugins)
-            persistent_root = _os.path.join(astrbot_data_root, "plugin_data", "astrbot_plugin_xbbot")
-            _os.makedirs(persistent_root, exist_ok=True)
-            # 自动无缝迁移旧数据(不覆盖)
-            for f in ("nuli_slave.db", "config.json", "events.json"):
-                src_f = _os.path.join(_BASE, "data", f)
-                dst_f = _os.path.join(persistent_root, f)
-                if _os.path.isfile(src_f) and not _os.path.isfile(dst_f):
-                    try:
-                        import shutil as _sh
-                        _sh.copy2(src_f, dst_f)
-                    except Exception:
-                        pass
-            # 自动同步内置武器图库至持久化目录
-            src_gacha = _os.path.join(_BASE, "data", "gacha_img")
-            dst_gacha = _os.path.join(persistent_root, "gacha_img")
-            if _os.path.isdir(src_gacha):
-                try:
-                    import shutil as _sh
-                    _sh.copytree(src_gacha, dst_gacha, dirs_exist_ok=True)
-                except Exception:
-                    pass
-            return persistent_root
-    except Exception:
-        pass
+    if hasattr(store, "get_persistent_data_dir"):
+        return store.get_persistent_data_dir(_BASE)
     return _os.path.join(_BASE, "data")
 
 DATA_DIR = _resolve_persistent_data_dir()
@@ -1785,7 +1758,8 @@ def init_slave(bot_uin="", note_names=None, import_wallet_dir=""):
     if note_names:
         NOTE_NAMES.update(note_names)
     load_events()
-    store.init(DB_PATH, CONFIG_JSON)
+    if getattr(store, "_DB", None) is None:
+        store.init(DB_PATH, CONFIG_JSON)
     _os.makedirs(GROUPS_DIR, exist_ok=True)
     _os.makedirs(WALLET_DIR, exist_ok=True)
     if import_wallet_dir and _os.path.isdir(import_wallet_dir):

@@ -5,7 +5,7 @@ import os
 import time
 from astrbot.api.web import json_response
 
-from .helpers import _err
+from .helpers import _err, get_req_query, get_req_json
 
 try:
     from ... import store as ST
@@ -16,6 +16,8 @@ except ImportError:
 def _backup_base(plugin_base=""):
     if ST.BACKUP_DIR:
         return ST.BACKUP_DIR
+    if hasattr(ST, "get_persistent_data_dir"):
+        return os.path.join(ST.get_persistent_data_dir(plugin_base), "backups")
     if plugin_base:
         return os.path.join(plugin_base, "data", "backups")
     return os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))), "data", "backups")
@@ -34,7 +36,7 @@ async def handle_backups_list(request, plugin_base=""):
         ST.maybe_auto_backup()
     except Exception:
         pass
-    rel = request.query.get("dir", "") or request.query.get("path", "")
+    rel = get_req_query(request, "dir", "") or get_req_query(request, "path", "")
     root = _safe_backup(rel, _backup_base(plugin_base))
     if not root:
         return _err("bad dir", 400)
@@ -64,10 +66,10 @@ async def handle_backups_list(request, plugin_base=""):
 
 
 async def handle_backups_restore(request, plugin_base=""):
-    p = await request.json(default={})
+    p = await get_req_json(request, default={})
     rel = str((p.get("path") or p.get("file") or "") if isinstance(p, dict) else "").strip()
     if not rel:
-        rel = request.query.get("path", "") or request.query.get("file", "")
+        rel = get_req_query(request, "path", "") or get_req_query(request, "file", "")
     rel = str(rel).strip()
     if rel == "__backup_now__":
         dst = ST.backup_user_data(force=True)
@@ -112,10 +114,10 @@ async def handle_backups_restore(request, plugin_base=""):
 
 
 async def handle_backups_delete(request, plugin_base=""):
-    p = await request.json(default={})
+    p = await get_req_json(request, default={})
     rel = str((p.get("path") or p.get("file") or p.get("dir") or "") if isinstance(p, dict) else "").strip()
     if not rel:
-        rel = request.query.get("path", "") or request.query.get("file", "") or request.query.get("dir", "")
+        rel = get_req_query(request, "path", "") or get_req_query(request, "file", "") or get_req_query(request, "dir", "")
     rel = str(rel).strip()
     if not rel:
         return _err("path required", 400)
@@ -142,14 +144,10 @@ async def handle_backups_delete(request, plugin_base=""):
 
 
 async def handle_backups_export(request, plugin_base=""):
-    rel = ""
-    try:
-        rel = str(request.query.get("path") or request.query.get("file") or "").strip()
-    except Exception:
-        pass
+    rel = get_req_query(request, "path", "") or get_req_query(request, "file", "")
     if not rel:
         try:
-            p = await request.json(default={})
+            p = await get_req_json(request, default={})
             if isinstance(p, dict):
                 rel = str(p.get("path") or p.get("file") or "").strip()
         except Exception:
@@ -180,10 +178,10 @@ async def handle_backups_export(request, plugin_base=""):
     try:
         if os.path.getsize(fp) > 50 * 1024 * 1024:
             return _err("file too large", 400)
-        is_raw = str(request.query.get("raw", "") or request.query.get("download", "")).strip() in ("1", "true", "yes")
+        is_raw = get_req_query(request, "raw", "") in ("1", "true", "yes") or get_req_query(request, "download", "") in ("1", "true", "yes")
         if not is_raw:
             try:
-                p2 = await request.json(default={})
+                p2 = await get_req_json(request, default={})
                 if isinstance(p2, dict) and str(p2.get("raw", "")).strip() in ("1", "true", "yes"):
                     is_raw = True
             except Exception:
@@ -197,7 +195,7 @@ async def handle_backups_export(request, plugin_base=""):
 
 async def handle_clear_all(request, plugin_base=""):
     try:
-        p = await request.json(default={})
+        p = await get_req_json(request, default={})
         if not isinstance(p, dict) or p.get("confirm") != "确认删除":
             return _err("need confirm=确认删除", 400)
         if p.get("confirm2") != "确认":

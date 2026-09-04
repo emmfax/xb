@@ -5,7 +5,12 @@ import os
 import time
 from astrbot.api.web import json_response
 
-from .helpers import _err
+from .helpers import _err, get_req_query, get_req_json
+
+try:
+    from ... import store as ST
+except ImportError:
+    import store as ST
 
 def _img_base(plugin_base=""):
     if plugin_base:
@@ -18,9 +23,10 @@ def _safe_path(rel, base=""):
     p = os.path.abspath(os.path.join(b, str(rel or "").strip().lstrip("/\\")))
     # 允许访问插件根及其子目录
     if p != b and not p.startswith(b + os.sep):
-        # 也允许 data 目录
+        # 也允许 data 与 persistent 目录
         data_base = os.path.join(b, "data")
-        if p != data_base and not p.startswith(data_base + os.sep):
+        pers_base = ST.get_persistent_data_dir(b) if hasattr(ST, "get_persistent_data_dir") else data_base
+        if (p != data_base and not p.startswith(data_base + os.sep)) and (p != pers_base and not p.startswith(pers_base + os.sep)):
             # 宽松：只要在插件根下即可
             if not p.startswith(b):
                 return None
@@ -28,7 +34,7 @@ def _safe_path(rel, base=""):
 
 
 async def handle_images_list(request, plugin_base=""):
-    rel = request.query.get("dir", "") or request.query.get("path", "") or ""
+    rel = get_req_query(request, "dir", "") or get_req_query(request, "path", "")
     base = _img_base(plugin_base)
     root = _safe_path(rel, base)
     if not root:
@@ -86,15 +92,10 @@ async def handle_images_upload(request, plugin_base=""):
     if not f:
         return _err("no file", 400)
     # 目标目录
-    target_dir = ""
-    try:
-        # 兼容 query / form field 指定目录
-        target_dir = str(request.query.get("dir", "") or request.query.get("path", "") or "").strip()
-    except Exception:
-        pass
+    target_dir = get_req_query(request, "dir", "") or get_req_query(request, "path", "")
     if not target_dir:
         try:
-            p = await request.json(default={})
+            p = await get_req_json(request, default={})
             if isinstance(p, dict):
                 target_dir = str(p.get("dir", "") or p.get("path", "") or "").strip()
         except Exception:
@@ -146,10 +147,10 @@ async def handle_images_upload(request, plugin_base=""):
 
 
 async def handle_images_delete(request, plugin_base=""):
-    p = await request.json(default={})
+    p = await get_req_json(request, default={})
     rel = str((p.get("path") or p.get("file") or "") if isinstance(p, dict) else "").strip()
     if not rel:
-        rel = request.query.get("path", "") or request.query.get("file", "")
+        rel = get_req_query(request, "path", "") or get_req_query(request, "file", "")
     rel = str(rel).strip()
     if not rel:
         return _err("path required", 400)
@@ -169,7 +170,7 @@ async def handle_images_delete(request, plugin_base=""):
 
 
 async def handle_images_rename(request, plugin_base=""):
-    p = await request.json(default={})
+    p = await get_req_json(request, default={})
     src = str((p.get("path") or p.get("src") or p.get("file") or "") if isinstance(p, dict) else "").strip()
     dst = str((p.get("new") or p.get("dst") or p.get("name") or "") if isinstance(p, dict) else "").strip()
     if not src or not dst:
@@ -194,10 +195,10 @@ async def handle_images_rename(request, plugin_base=""):
 
 
 async def handle_images_mkdir(request, plugin_base=""):
-    p = await request.json(default={})
+    p = await get_req_json(request, default={})
     rel = str((p.get("path") or p.get("dir") or p.get("name") or "") if isinstance(p, dict) else "").strip()
     if not rel:
-        rel = request.query.get("path", "") or request.query.get("dir", "")
+        rel = get_req_query(request, "path", "") or get_req_query(request, "dir", "")
     rel = str(rel).strip()
     if not rel:
         return _err("path required", 400)
@@ -213,7 +214,7 @@ async def handle_images_mkdir(request, plugin_base=""):
 
 
 async def handle_images_copy(request, plugin_base=""):
-    p = await request.json(default={})
+    p = await get_req_json(request, default={})
     src = str((p.get("src") or p.get("path") or "") if isinstance(p, dict) else "").strip()
     dst = str((p.get("dst") or p.get("new") or "") if isinstance(p, dict) else "").strip()
     if not src or not dst:
@@ -236,10 +237,10 @@ async def handle_images_copy(request, plugin_base=""):
 
 
 async def handle_images_export(request, plugin_base=""):
-    rel = str(request.query.get("path") or request.query.get("file") or "").strip()
+    rel = get_req_query(request, "path", "") or get_req_query(request, "file", "")
     if not rel:
         try:
-            p = await request.json(default={})
+            p = await get_req_json(request, default={})
             if isinstance(p, dict):
                 rel = str(p.get("path") or p.get("file") or "").strip()
         except Exception:

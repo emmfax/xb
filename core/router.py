@@ -9,7 +9,7 @@ _REPLY_OVERRIDE_SEC = "指令回复配置"
 _DEFAULT_MARKERS = ("{回复}", "{默认}", "默认", "默认回复")
 _CUSTOM_SEC = "自定义指令配置"
 _DISABLE_SEC = "指令启用配置"
-_SYS_ENG = {'slave': '奴隶', 'sign': '签到', 'bank': '银行', 'ent': '娱乐', 'spirit': '精灵', 'ride': '坐骑', 'guild': '帮派', 'superadmin': '超管', 'chat': '聊天', 'adventure': 'adventure'}
+_SYS_ENG = {'slave': '奴隶', 'sign': '签到', 'bank': '银行', 'ent': '娱乐', 'spirit': '精灵', 'ride': '坐骑', 'guild': '帮派', 'superadmin': '超管', 'chat': '聊天', 'adventure': '冒险'}
 
 _MAIN_MENU = (
     "★ 小白主菜单 ★\r\n"
@@ -152,6 +152,41 @@ def _batch_guard_map(gid, is_admin, store):
     except Exception:
         pass
     return res
+
+_ENGINE_CMDS = {}
+
+def _get_engine_cmds(engine, store=None):
+    if engine not in _ENGINE_CMDS:
+        try:
+            from .config import _collect_commands
+            import os
+            base = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+            all_cmds = _collect_commands(base, store)
+            if all_cmds:
+                _ENGINE_CMDS.update(all_cmds)
+        except Exception:
+            pass
+    return _ENGINE_CMDS.get(engine, [])
+
+def _matches_engine(raw, engine, store=None):
+    if not raw:
+        return False
+    rt = str(raw).strip()
+    sysname = _SYS_ENG.get(engine, engine)
+    if store and hasattr(store, "wake"):
+        try:
+            wakes = store.wake(sysname + "系统", sysname + "系统")
+            if rt in wakes:
+                return True
+        except Exception:
+            pass
+    if rt in (sysname + "系统", sysname + "菜单", sysname + "帮助"):
+        return True
+    cmds = _get_engine_cmds(engine, store)
+    for c in cmds:
+        if c and rt.startswith(c):
+            return True
+    return False
 
 
 def _multi_reply(reply_tpl):
@@ -312,7 +347,9 @@ def handle(gid, qq, raw, is_private=False, is_admin=False, store=None, engines=N
                 continue
             g = _batch_map.get(_eng) if _batch_map else (_guard(gid, _eng, is_admin, raw, store) if store else None)
             if g:
-                return g
+                if _matches_engine(raw, _eng, store):
+                    return g
+                continue
             try:
                 r = fn.handle(gid, qq, raw) if hasattr(fn, "handle") else fn(gid, qq, raw)
             except Exception:
@@ -323,22 +360,26 @@ def handle(gid, qq, raw, is_private=False, is_admin=False, store=None, engines=N
     if engines and superadmin_mod:
         g = _batch_map.get("superadmin") if _batch_map else (_guard(gid, "superadmin", is_admin, raw, store) if store else None)
         if g:
-            return g
-        try:
-            r = superadmin_mod.handle(gid, qq, raw, is_admin)
-            if r:
-                return apply_reply_override(raw, r, store)
-        except Exception:
-            pass
+            if _matches_engine(raw, "superadmin", store):
+                return g
+        else:
+            try:
+                r = superadmin_mod.handle(gid, qq, raw, is_admin)
+                if r:
+                    return apply_reply_override(raw, r, store)
+            except Exception:
+                pass
     elif engines and "superadmin" in engines:
         fn = engines["superadmin"]
         g = _batch_map.get("superadmin") if _batch_map else (_guard(gid, "superadmin", is_admin, raw, store) if store else None)
         if g:
-            return g
-        try:
-            r = fn.handle(gid, qq, raw, is_admin) if hasattr(fn, "handle") else fn(gid, qq, raw, is_admin)
-            if r:
-                return apply_reply_override(raw, r, store)
-        except Exception:
-            pass
+            if _matches_engine(raw, "superadmin", store):
+                return g
+        else:
+            try:
+                r = fn.handle(gid, qq, raw, is_admin) if hasattr(fn, "handle") else fn(gid, qq, raw, is_admin)
+                if r:
+                    return apply_reply_override(raw, r, store)
+            except Exception:
+                pass
     return None

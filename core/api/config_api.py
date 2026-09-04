@@ -4,7 +4,7 @@ import os
 import json
 import time
 from astrbot.api.web import json_response
-from .helpers import _err
+from .helpers import _err, get_req_query, get_req_json
 
 try:
     from ... import store as ST
@@ -45,7 +45,7 @@ async def handle_cfg_get(request):
 
 async def handle_cfg_save(request, plugin_base=""):
     try:
-        p = await request.json(default={})
+        p = await get_req_json(request, default={})
         if not isinstance(p, dict):
             return _err("payload must be dict", 400)
         norm = _cfg_layer._normalize_cfg(p)
@@ -363,11 +363,7 @@ PRESETS = {
 async def handle_config_auto_balance(request):
     """一键应用28大系统智能数值平衡预设与奴隶全员身价联动校准"""
     try:
-        data = {}
-        try:
-            data = await request.json()
-        except Exception:
-            pass
+        data = await get_req_json(request, default={})
 
         mode = str(data.get("mode") or "casual").lower().strip()
         if mode not in PRESETS:

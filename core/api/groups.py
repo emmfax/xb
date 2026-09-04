@@ -2,6 +2,7 @@
 """群组开关 API — 总开关 + 按群开关"""
 import json
 from astrbot.api.web import json_response
+from .helpers import _err, get_req_query, get_req_json
 
 try:
     from ... import store as ST
@@ -44,14 +45,7 @@ async def handle_groups_list(request=None):
     return json_response({"total_enabled": total_enabled, "groups": out})
 
 async def handle_groups_toggle(request):
-    data = {}
-    try:
-        data = await request.json()
-    except Exception:
-        try:
-            data = await request.post()
-        except Exception:
-            data = {}
+    data = await get_req_json(request, default={})
     gid = str(data.get("gid", "") or data.get("group_id", "") or "").strip()
     enabled = data.get("enabled")
     if isinstance(enabled, str):
@@ -90,14 +84,7 @@ async def handle_groups_toggle(request):
     return json_response({"ok": True, "gid": gid, "enabled": enabled})
 
 async def handle_groups_delete(request):
-    data = {}
-    try:
-        data = await request.json()
-    except Exception:
-        try:
-            data = await request.post()
-        except Exception:
-            data = {}
+    data = await get_req_json(request, default={})
     gid = str(data.get("gid", "") or data.get("group_id", "") or "").strip()
     if not gid or not gid.isdigit():
         return json_response({"ok": False, "msg": "群号必填且需为纯数字"})

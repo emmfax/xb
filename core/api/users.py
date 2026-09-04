@@ -5,7 +5,7 @@ import json
 import time
 from astrbot.api.web import json_response
 
-from .helpers import _err
+from .helpers import _err, get_req_query, get_req_json
 
 try:
     from ... import store as ST
@@ -17,7 +17,7 @@ except ImportError:
     except ImportError:
         import slave  # type: ignore
 
-PLUGIN_VERSION = "0.68.0"
+PLUGIN_VERSION = "0.68.1"
 
 
 def _extract_param(request, key, default=""):
@@ -84,7 +84,7 @@ async def handle_users(request):
 
 
 async def handle_user_edit(request):
-    p = await request.json(default={})
+    p = await get_req_json(request, default={})
     if not isinstance(p, dict):
         return _err("payload must be dict", 400)
     qq = str(p.get("qq") or "").strip()
@@ -128,7 +128,7 @@ async def handle_user_export(request):
     qq = _extract_param(request, "qq", "").strip()
     if not gid or not qq:
         try:
-            p = await request.json(default={})
+            p = await get_req_json(request, default={})
             if isinstance(p, dict):
                 if not gid and p.get("gid"):
                     gid = str(p.get("gid")).strip()
@@ -165,7 +165,7 @@ async def handle_user_export(request):
 
 
 async def handle_user_import(request):
-    p = await request.json(default={})
+    p = await get_req_json(request, default={})
     if not isinstance(p, dict):
         return _err("payload must be dict", 400)
     gid = str(p.get("gid") or "").strip()
@@ -331,7 +331,7 @@ async def handle_users_export(request):
 
 
 async def handle_users_import(request):
-    p = await request.json(default={})
+    p = await get_req_json(request, default={})
     users = []
     if isinstance(p, list):
         users = p
@@ -403,16 +403,7 @@ async def handle_users_import(request):
 
 async def handle_users_clean_left(request, context=None):
     """清理已退群人员的全部数据（钱包、账户、奴隶、精灵）"""
-    p = {}
-    try:
-        p = await request.json()
-    except Exception:
-        try:
-            p = await request.post()
-        except Exception:
-            p = {}
-    if not isinstance(p, dict):
-        p = {}
+    p = await get_req_json(request, default={})
 
     gid = str(p.get("gid") or _extract_param(request, "gid", "") or "").strip()
     gids = []
@@ -552,7 +543,7 @@ async def handle_users_clean_left(request, context=None):
 async def handle_users_airdrop(request):
     """批量全员/定向群福利空投分发"""
     try:
-        data = await request.json(default={})
+        data = await get_req_json(request, default={})
         if not isinstance(data, dict):
             return _err("invalid json body", 400)
 
