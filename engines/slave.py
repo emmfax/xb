@@ -582,7 +582,13 @@ def cmd_buy_slave(gid, qq, target, st):
 
 def cmd_torture(gid, qq, target, st):
     if not target:
-        return T.TORTURE_WHO
+        my_slaves = slaves_of(st, qq)
+        if not my_slaves:
+            return T.TORTURE_ALL_DONE
+        if len(my_slaves) == 1:
+            target = my_slaves[0]
+        else:
+            return T.TORTURE_WHO
     tid = str(target)
     if tid == qq:
         return T.TORTURE_SELF
@@ -691,9 +697,9 @@ def cmd_release(gid, qq, target, st):
 
 
 def cmd_ransom(gid, qq, target, st):
-    """赎身@QQ: 帮别人的奴隶向其主人支付身价, 让TA自由"""
-    if not target:
-        return T.RANSOM_WHO
+    """赎身@QQ: 帮别人的奴隶向其主人支付身价, 让TA自由; 未指定目标或为自己时自动执行赎身自由"""
+    if not target or str(target) == str(qq):
+        return cmd_freedom(gid, qq, st)
     tid = str(target)
     s = U(st, tid)
     owner = uget(s, "owner")

@@ -394,7 +394,7 @@ def cmd_welfare(gid, qq):
 def cmd_battle(gid, qq, gname):
     my = _my(gid, qq)
     if not my.get("name"):
-        return "亲，您还创建或加入任何帮派！"
+        return "亲，您还没有创建或加入任何帮派！"
     if my.get("pos") not in ("帮主", "护法"):
         return "亲，您不是帮主或护法，没有权力发起帮战！"
     if not gname:
@@ -572,8 +572,10 @@ def handle(gid, qq, raw):
         return cmd_join(gid, qq, text[4:].strip())
     if text in ("同意加入帮派", "接受邀请", "同意邀请"):
         return cmd_accept_invite(gid, qq)
-    if text.startswith("guild_invite"):
+    if text.startswith("帮派邀请"):
         return cmd_invite(gid, qq, text[4:].strip())
+    if text.startswith("guild_invite"):
+        return cmd_invite(gid, qq, text[12:].strip())
     if text.startswith("帮派贡献"):
         import re as _re2
         m = _re2.search(r"(\d+)", text)

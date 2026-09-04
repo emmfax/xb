@@ -66,7 +66,7 @@ MENU = (
     "🌫️ 里世界 恐怖旅程 雪夜之旅 幽灵谜境\r\n"
     "🌙 入夜暴走\r\n"
     "📖 冒险 地图　🎲 选择 序号\r\n"
-    "📋 当前冒险　🧭 结束冒险(消耗复活币)\r\n"
+    "📋 当前冒险　🧭 结束冒险\r\n"
     "🏆 复活币排行\r\n"
     "━━━━━━━━━━━━━━\r\n"
     "💡 发送【冒险 地图】开始冒险，消耗体力+金币"
@@ -265,7 +265,7 @@ def handle(gid, qq, raw):
         return MENU
     if text == "当前冒险":
         return cmd_current(gid, qq)
-    if text == "结束冒险":
+    if text in ("结束冒险", "结束冒险(消耗复活币)", "结束冒险（消耗复活币）"):
         return cmd_end(gid, qq)
     if text == "复活币排行":
         return cmd_rank(gid, qq)

@@ -17,7 +17,7 @@ except ImportError:
     except ImportError:
         import slave  # type: ignore
 
-PLUGIN_VERSION = "0.68.5"
+PLUGIN_VERSION = "0.68.7"
 
 
 def _extract_param(request, key, default=""):
@@ -565,10 +565,11 @@ async def handle_users_airdrop(request):
         targets = set() # set of (gid, qq)
 
         if target_gid:
-            cur.execute("SELECT gid, qq FROM wallet WHERE gid = ?", (str(target_gid),))
+            gid_arg = int(target_gid) if target_gid.isdigit() else str(target_gid)
+            cur.execute("SELECT gid, qq FROM wallet WHERE gid = ?", (gid_arg,))
             for r in cur.fetchall():
                 targets.add((str(r[0]), str(r[1])))
-            cur.execute("SELECT gid, qq FROM accounts WHERE gid = ?", (str(target_gid),))
+            cur.execute("SELECT gid, qq FROM accounts WHERE gid = ?", (gid_arg,))
             for r in cur.fetchall():
                 targets.add((str(r[0]), str(r[1])))
         else:

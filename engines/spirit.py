@@ -27,7 +27,7 @@ MENU = (
     "📋 我的精灵　　🔍 查看精灵 名称\r\n"
     "🛍️ 精灵商城　　🎒 我的背包\r\n"
     "🗺️ 精灵地图　　📍 查看地图 地点\r\n"
-    "⚔️ 冒险 地点　　🔮 使用精灵球 名称\r\n"
+    "⚔️ 精灵冒险 地点　　🔮 使用精灵球 名称\r\n"
     "🎽 出战精灵 名称　🕊️ 回收出战精灵\r\n"
     "💠 携带精灵 名称　🗑️ 丢弃精灵 名称\r\n"
     "🏆 精灵排行\r\n"
@@ -510,6 +510,15 @@ def cmd_evolve(gid, qq, name):
 # ---- 精灵PVP(总战力对打) ----
 def cmd_pvp(gid, qq, target):
     target = (target or "").strip()
+    if target:
+        t_at, _ = ST.parse_at(target)
+        if t_at:
+            target = t_at
+        else:
+            import re as _re_pvp
+            m_qq = _re_pvp.search(r"(\d{5,12})", target)
+            if m_qq:
+                target = m_qq.group(1)
     if not target or target == str(qq):
         return "亲，请输入对方QQ：精灵对战 对方QQ"
     sp = _spirits(gid, qq)
@@ -667,8 +676,10 @@ def handle(gid, qq, raw):
         return cmd_discard(gid, qq, m[4:].strip())
     if m.startswith("进化"):
         return cmd_evolve(gid, qq, m[2:].strip())
-    if m.startswith("精灵对战") or m.startswith("挑战"):
+    if m.startswith("精灵对战"):
         return cmd_pvp(gid, qq, m[4:].strip())
+    if m.startswith("挑战"):
+        return cmd_pvp(gid, qq, m[2:].strip())
     if m.startswith("羁绊"):
         return "羁绊系统：与你的精灵共同冒险提升亲密度（待实装）。"
     if m.startswith("精灵排行"):
