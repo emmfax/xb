@@ -443,28 +443,32 @@ def handle(gid, qq, raw, is_admin=False):
         return f"维护开关：{sw}\r\n维护信息：{msg}"
     if text in ("小白版本", "版本"):
         return _version()
-    if text == "检查更新":
+    if text in ("检查更新", "小白更新", "检查版本"):
         try:
-            cur_v = _version().replace("小白版本：", "").strip()
-            # 兼容同步请求，防止在运行中事件循环内调用 asyncio.run 报错
-            lat_v = ""
+            info = None
             try:
-                import urllib.request
-                req = urllib.request.Request(
-                    "https://api.github.com/repos/emmfax/xb/releases/latest",
-                    headers={"User-Agent": "XbBot/1.0", "Accept": "application/vnd.github.v3+json"}
-                )
-                with urllib.request.urlopen(req, timeout=3) as resp:
-                    if resp.status == 200:
-                        data = json.loads(resp.read().decode("utf-8"))
-                        lat_v = data.get("tag_name") or data.get("name") or ""
+                from ..core.api import updater
+                info = updater.check_latest_version()
             except Exception:
-                pass
-            if lat_v and lat_v != cur_v and lat_v.replace("v", "") != cur_v.replace("v", ""):
-                return f"🚀 发现小白新版本【{lat_v}】(当前: {cur_v})\n可前往 AstrBot 插件管理面板一键更新！"
-            return f"✅ 当前小白已是最新版本【{cur_v}】。"
-        except Exception:
-            return f"小白版本：{_version()}"
+                try:
+                    from core.api import updater
+                    info = updater.check_latest_version()
+                except Exception:
+                    pass
+
+            if info and info.get("has_update"):
+                lat_v = info.get("latest_version")
+                cur_v = info.get("current_version")
+                name = info.get("release_name", "")
+                return f"🚀 发现小白新版本【{lat_v}】(当前: {cur_v})\n🏷️ 发布信息: {name}\n💡 可前往 AstrBot 后台「插件管理」页面点击更新升级！"
+            elif info:
+                cur_v = info.get("current_version")
+                lat_v = info.get("latest_version")
+                return f"✅ 当前小白已是最新版本【{cur_v}】(云端最新: {lat_v})。"
+            else:
+                return f"小白版本：{_version()}"
+        except Exception as e:
+            return f"检查更新异常: {e}"
     # 测试指令（WebUI 指令-超管系统可见，聊天不显示，仅 main._dispatch 处理）
     if text.startswith("测试testxb"):
         return None
