@@ -685,7 +685,8 @@ def save_group(gid):
 # ==================== 6. 业务扩展：红包 / kv ====================
 def redpack_put(gid, qq, pwd, amount):
     with _LOCK:
-        _DB.execute("DELETE FROM redpacks WHERE gid=?", (int(gid),))
+        _DB.execute("DELETE FROM redpacks WHERE gid=? AND pwd=?", (int(gid), str(pwd)))
+        _DB.execute("DELETE FROM redpacks WHERE ts < ?", (int(time.time()) - 86400,))
         _DB.execute("INSERT INTO redpacks(gid, qq, pwd, amount, ts) VALUES(?,?,?,?,?)",
                     (int(gid), int(qq), str(pwd), int(amount), int(time.time())))
         _DB.commit()

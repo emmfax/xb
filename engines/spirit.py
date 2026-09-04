@@ -168,6 +168,15 @@ def _add_exp(gid, qq, sp, it, amount):
         evo = base.get("evolve", "否")
         if evo and evo != "否" and it["level"] >= base.get("lv", 0):
             it["name"] = evo
+            evo_base = _SPIRITS().get(evo, {})
+            if evo_base:
+                it["type"] = evo_base.get("type", it.get("type", ""))
+                it["hp"] = evo_base.get("hp", it.get("hp", 0))
+                it["atk"] = evo_base.get("atk", it.get("atk", 0))
+                it["def"] = evo_base.get("def", it.get("def", 0))
+                it["spa"] = evo_base.get("spa", it.get("spa", 0))
+                it["spd"] = evo_base.get("spd", it.get("spd", 0))
+                it["spe"] = evo_base.get("spe", it.get("spe", 0))
             evolved = f"   进化成 {evo}！\r\n"
     _save(gid, qq, sp)
     return evolved
@@ -485,11 +494,15 @@ def cmd_evolve(gid, qq, name):
     if int(bag.get("进化液", 0)) <= 0:
         del bag["进化液"]
     it["name"] = evo
-    it["hp"] = base.get("hp", it.get("hp", 0))
-    it["atk"] = base.get("atk", it.get("atk", 0))
-    it["def"] = base.get("def", it.get("def", 0))
-    it["spa"] = base.get("spa", it.get("spa", 0))
-    it["spd"] = base.get("spd", it.get("spd", 0))
+    evo_base = _SPIRITS().get(evo, {})
+    if evo_base:
+        it["type"] = evo_base.get("type", it.get("type", ""))
+        it["hp"] = evo_base.get("hp", it.get("hp", 0))
+        it["atk"] = evo_base.get("atk", it.get("atk", 0))
+        it["def"] = evo_base.get("def", it.get("def", 0))
+        it["spa"] = evo_base.get("spa", it.get("spa", 0))
+        it["spd"] = evo_base.get("spd", it.get("spd", 0))
+        it["spe"] = evo_base.get("spe", it.get("spe", 0))
     _save(gid, qq, sp)
     return f"恭喜！「{name}」进化成「{evo}」！"
 

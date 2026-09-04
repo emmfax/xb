@@ -240,24 +240,44 @@ def _clear_field(gid, t, field, label):
 
 
 def cmd_clear(gid, qq, arg):
-    m = re.match(r"清空(财富|体力|魅力|账户|精灵)\s*(\d{5,12})", arg)
+    arg = (arg or "").strip()
+    m = re.match(r"^清空(财富|体力|魅力|账户|精灵)\s*(.*)$", arg)
     if not m:
         return "格式：清空{财富/体力/魅力/账户/精灵} @QQ"
-    kind, t = m.group(1), m.group(2)
+    kind = m.group(1)
+    rest = m.group(2).strip()
+    t = None
+    try:
+        t_parsed, _ = ST.parse_at(rest)
+        if t_parsed:
+            t = str(t_parsed).strip()
+    except Exception:
+        pass
+    if not t:
+        m_cq = re.search(r"\[CQ:at,qq=(\d+)[^\]]*\]", rest)
+        if m_cq:
+            t = m_cq.group(1)
+    if not t:
+        m_qq = re.search(r"@?\s*(\d{5,12})", rest)
+        if m_qq:
+            t = m_qq.group(1)
+    if not t:
+        return "格式：清空{财富/体力/魅力/账户/精灵} @QQ"
     if kind == "财富":
         return _clear_money(gid, t)
-    if kind == "stamina":
-        return _clear_field(gid, t, "stamina", "stamina")
-    if kind == "charm":
-        return _clear_field(gid, t, "charm", "charm")
+    if kind in ("体力", "stamina"):
+        return _clear_field(gid, t, "stamina", "体力")
+    if kind in ("魅力", "charm"):
+        return _clear_field(gid, t, "charm", "魅力")
     if kind == "账户":
         a = _acct(gid, t)
         a.kv.clear()
         ST.acct_save(gid, t)
-        return f"已清空 <{_name(t)}> 的账户数据。"
+        _clear_money(gid, t)
+        return f"已清空 <{_name(t)}> 的账户及财富数据。"
     if kind == "精灵":
         a = _acct(gid, t)
-        a.set("spirits", json.dumps({}))
+        a.set("spirits", "{}")
         ST.acct_save(gid, t)
         return f"已清空 <{_name(t)}> 的精灵。"
     return "未知操作。"
@@ -368,7 +388,7 @@ def _version():
             except Exception:
                 pass
         if not ver:
-            ver = "0.68.3"
+            ver = "0.68.4"
         return f"小白版本：{ver}"
     except Exception as e:
         return f"小白版本：未知（{e}）"

@@ -199,17 +199,13 @@ def cmd_choose(gid, qq, n):
             f"🏆 通关奖励：{reward}{ST.coin_name()}，当前复活币×{rv}\r\n"
             f"冒险已结束，发送【冒险 地图】开启新征程！"
         )
-    # 续程：给出下一轮的抉择提示
-    next_choices = CHOICE_LABELS.get(m, ["选择 1", "选择 2", "选择 3"])
-    # 轻微随机打乱描述，增加重玩感
-    random.shuffle(next_choices)
-    # 但保持原序更易理解，故取前 3 不打乱，或微调
-    # 此处保留原序以免玩家困惑，仅在 outcome 后附加提示
+    # 续程：给出下一轮的抉择提示（保持原序更易理解，避免玩家困惑）
+    next_choices = CHOICE_LABELS.get(m, ["【选择 1】", "【选择 2】", "【选择 3】"])
     return (
         f"【{m}·第{adv['round']}轮/共{max_round}轮】\r\n"
         f"{outcome}\r\n"
         "━━━━━━━━━━━━━━\r\n"
-        "下一抉择：\r\n" + "\r\n".join(CHOICE_LABELS.get(m, [])) + "\r\n"
+        "下一抉择：\r\n" + "\r\n".join(next_choices) + "\r\n"
         "继续发送【选择 序号】推进，或【结束冒险】消耗复活币提前结束！"
     )
 
@@ -251,7 +247,13 @@ def cmd_rank(gid, qq):
     lst.sort(reverse=True)
     lines = ["---复活币排行---"]
     for i, (rv, q) in enumerate(lst[:10], 1):
-        lines.append("%d. %s　%d个" % (i, q, rv))
+        disp = str(q)
+        try:
+            from . import slave as SL
+            disp = SL.NOTE_NAMES.get(str(q), str(q))
+        except Exception:
+            pass
+        lines.append("%d. %s　%d个" % (i, disp, rv))
     return "\r\n".join(lines) if lines[1:] else "暂无复活币~"
 
 

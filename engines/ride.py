@@ -87,11 +87,41 @@ def _rides(gid, qq):
 # 千群千人欢迎优化：内存集合快速过滤无欢迎群，避免每消息 DB 读
 _WELCOME_GIDS = set()
 _WELCOME_GIDS_LOCK = None
+_WELCOME_INITIALIZED = False
 try:
     import threading as _th_w
     _WELCOME_GIDS_LOCK = _th_w.RLock()
 except Exception:
     pass
+
+def _ensure_welcome_init():
+    global _WELCOME_INITIALIZED
+    if _WELCOME_INITIALIZED:
+        return
+    try:
+        if _WELCOME_GIDS_LOCK:
+            with _WELCOME_GIDS_LOCK:
+                if not _WELCOME_INITIALIZED:
+                    if ST._DB is not None:
+                        try:
+                            rows = ST._DB.execute("SELECT DISTINCT gid FROM accounts WHERE data LIKE '%\"welcome\"%'").fetchall()
+                            for (g,) in rows:
+                                _WELCOME_GIDS.add(str(g))
+                        except Exception:
+                            pass
+                    _WELCOME_INITIALIZED = True
+        else:
+            if not _WELCOME_INITIALIZED:
+                if ST._DB is not None:
+                    try:
+                        rows = ST._DB.execute("SELECT DISTINCT gid FROM accounts WHERE data LIKE '%\"welcome\"%'").fetchall()
+                        for (g,) in rows:
+                            _WELCOME_GIDS.add(str(g))
+                    except Exception:
+                        pass
+                _WELCOME_INITIALIZED = True
+    except Exception:
+        pass
 
 def _welcome_add(gid):
     try:
@@ -374,14 +404,9 @@ def check_welcome(gid, qq):
     try:
         # 快速过滤：该群从未设置过欢迎，直接返回，避免每消息一次 acct DB 读（千群千人关键）
         try:
+            _ensure_welcome_init()
             if _WELCOME_GIDS is not None and str(gid) not in _WELCOME_GIDS:
-                # 懒加载：首次未命中时，检查 DB 是否已有 welcome（避免集合为空时误判）
-                # 仅当集合为空时才做一次扫描，后续靠 _save 维护
-                if len(_WELCOME_GIDS) == 0:
-                    # 扫描一次全库是否有 welcome，若扫描无则确实无欢迎
-                    pass
-                else:
-                    return None
+                return None
         except Exception:
             pass
         r = _rides(gid, qq)

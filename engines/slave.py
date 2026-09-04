@@ -1116,9 +1116,7 @@ def cmd_fight(gid, qq, target, st):
     if crit:
         lines.append(T.FIGHT_CRIT)
     lines.append(T.FIGHT_ENEMY_TEAM.format(team=", ".join(uname(st, s) for s in d_slaves)))
-    lines.append(T.FIGHT_POWER_CMP.format(a=my_p, b=ta_p))
-
-    pwin = my_p / (my_p + ta_p)
+    pwin = my_p / (my_p + ta_p) if (my_p + ta_p) > 0 else 0.5
     lines.append(T.FIGHT_WINRATE.format(pct=int(pwin * 100)))
     win = _random.random() < pwin
 
@@ -1673,8 +1671,12 @@ def _route_locked(gid, qq, raw):
         return cmd_gacha(gid, qq, st, count=10)
     if text.startswith("抽武器"):
         return cmd_gacha(gid, qq, st, count=1)
+    if text.startswith("武器升星"):
+        return cmd_starup(gid, qq, text[4:], st)
     if text.startswith("升星"):
         return cmd_starup(gid, qq, text[2:], st)
+    if text.startswith("宝物升阶"):
+        return cmd_treasure_up(gid, qq, text[4:], st)
     if text.startswith("升阶"):
         return cmd_treasure_up(gid, qq, text[2:], st)
     if text == "奴隶打工" or text == "我要打工":
@@ -1708,8 +1710,11 @@ def _route_locked(gid, qq, raw):
     if q.startswith("【") and q.endswith("】"):
         q = q[1:-1].strip()
     treas = [t for t in (cfg("设置", "treasure", "") or "").split("|") if t]
+    ssr_img_map = {}
     try:
-        all_w = [_os.path.splitext(_os.path.basename(p))[0] for p in _gacha_pool("SSR")]
+        ssr_pool = _gacha_pool("SSR")
+        all_w = [_os.path.splitext(_os.path.basename(p))[0] for p in ssr_pool]
+        ssr_img_map = {_os.path.splitext(_os.path.basename(p))[0]: p for p in ssr_pool}
     except Exception:
         all_w = []
     if q in treas:
@@ -1724,7 +1729,7 @@ def _route_locked(gid, qq, raw):
         lv = star_of(u, q)
         table = STAR_ATK
         owned = q in weapons_of(u)
-        imgp = _os.path.join(DATA_DIR, "gacha_img", "SSR", q + ".png")
+        imgp = ssr_img_map.get(q, _os.path.join(DATA_DIR, "gacha_img", "SSR", q + ".png"))
         img = _img_cq(imgp)
         return (T.W_NAME.format(name=q) + f"★{lv}\r\n"
                 + T.W_EFFECT.format(atk=f"+{table[min(5, lv)]}") + "\r\n"

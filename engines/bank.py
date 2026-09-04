@@ -348,15 +348,8 @@ def cmd_withdraw(gid, qq, amount):
             interest_note = ""
     else:
         interest_note = ""
-    # 取款需扣除本金+利息对应存款（利息部分已计入）
-    take_dep = amount
-    # 若有利息，利息对应的存款已在 _settle_interest 中计入 total，这里需同时扣除利息部分的存款
-    if interest:
-        take_dep = amount + interest
-        if dep < take_dep:
-            take_dep = amount  # 存款不足以扣利息则仅扣本金
-            interest = 0
-    new_dep = a.int("deposit") - take_dep
+    # 取款仅扣除本次取出的存款本金，利息为银行派发的收益额外计入钱包
+    new_dep = dep - amount
     ST.txn_coins_acct(gid, qq, amount + interest, {"deposit": str(new_dep), "withdraw_timestamp": str(int(time.time()))})
     base = (f"取款成功！获得利息：{interest}，本次取款：{amount}，\r\n"
             f"还剩存款：{new_dep}，剩余{ST.coin_name()}：{ST.coins_get(gid, qq)}")
@@ -626,7 +619,8 @@ def cmd_redpack(gid, qq, amount, pwd=None):
             a2.set("redpack_send_time", str(int(time.time())))
             ST._DB.execute("INSERT INTO accounts(gid, qq, data) VALUES(?,?,?) ON CONFLICT(gid, qq) DO UPDATE SET data=excluded.data", (int(gid), int(qq), __import__("json").dumps(a2.kv, ensure_ascii=False)))
             a2.dirty = False
-            ST._DB.execute("DELETE FROM redpacks WHERE gid=?", (int(gid),))
+            ST._DB.execute("DELETE FROM redpacks WHERE gid=? AND pwd=?", (int(gid), str(pwd)))
+            ST._DB.execute("DELETE FROM redpacks WHERE ts < ?", (int(time.time()) - 86400,))
             ST._DB.execute("INSERT INTO redpacks(gid, qq, pwd, amount, ts) VALUES(?,?,?,?,?)",
                            (int(gid), int(qq), pwd, amount, int(time.time())))
             ST._DB.commit()
@@ -637,7 +631,8 @@ def cmd_redpack(gid, qq, amount, pwd=None):
         ST.acct_save(gid, qq)
         try:
             with ST._LOCK:
-                ST._DB.execute("DELETE FROM redpacks WHERE gid=?", (int(gid),))
+                ST._DB.execute("DELETE FROM redpacks WHERE gid=? AND pwd=?", (int(gid), str(pwd)))
+                ST._DB.execute("DELETE FROM redpacks WHERE ts < ?", (int(time.time()) - 86400,))
                 ST._DB.execute("INSERT INTO redpacks(gid, qq, pwd, amount, ts) VALUES(?,?,?,?,?)",
                                (int(gid), int(qq), pwd, amount, int(time.time())))
                 ST._DB.commit()
@@ -738,14 +733,13 @@ def _bail_name(tid):
 
 def cmd_bail(gid, qq, target, self_bail=False, kind="保释"):
     """保释/自我保释/劫狱(替他人出狱) 劫狱免费，保释收费"""
-    if self_bail:
+    if self_bail or str(target).strip() in ("自己", str(qq)):
+        self_bail = True
         tid = qq
     else:
         tid = target
         if not tid:
             return f"请指定{kind}目标，格式：【{kind} @QQ】"
-        if str(tid) == str(qq):
-            return f"给自己{kind}请发送【自我保释】！"
     a = _acct(gid, qq)
     ta = _acct(gid, tid)
     if not _check_jail(ta):

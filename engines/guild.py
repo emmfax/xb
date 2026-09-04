@@ -381,9 +381,13 @@ def cmd_welfare(gid, qq):
     g = _my(gid, qq)
     if not g.get("name"):
         return "亲，您还没有加入任何帮派！"
+    key = f"guild_welfare_{gid}_{qq}_{time.strftime('%Y%m%d')}"
+    if ST.recall_get(key, ""):
+        return "亲，您今天已经领取过帮派福利了，明天再来吧！"
     base = _cfgi("福利基数", 10000)
     got = base + int(g.get("gong", 0)) * 10
     ST.coins_add(gid, qq, got)
+    ST.recall_set(key, "1")
     return f"领取帮派福利成功！获得 {got}{ST.coin_name()}（基础{base}+帮贡奖励）"
 
 
@@ -535,6 +539,7 @@ MEMU_MANAGE = (
     "帮派管理(帮主/护法)：\r\n修改宣言 内容　添加护法 QQ　取消护法 QQ\r\n"
     "移出帮派 QQ　出让帮派 QQ　帮派升级　解散帮派"
 )
+MENU_MANAGE = MEMU_MANAGE
 
 
 def handle(gid, qq, raw):
