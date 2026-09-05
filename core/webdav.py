@@ -44,7 +44,7 @@ def _make_ssl_context():
     return ctx
 
 
-def _ensure_remote_dir(base_url, remote_dir, auth, timeout=15):
+def _ensure_remote_dir(base_url, remote_dir, auth, timeout=6):
     """递归检查并创建 WebDAV 远端多级目录 (MKCOL)"""
     parts = [p for p in remote_dir.strip("/").split("/") if p]
     cur_url = base_url.rstrip("/")
@@ -84,7 +84,7 @@ def upload_backup(local_path):
     base_url = url.rstrip("/")
 
     try:
-        _ensure_remote_dir(base_url, rdir, auth)
+        _ensure_remote_dir(base_url, rdir, auth, timeout=6)
     except Exception:
         pass
 
@@ -102,7 +102,7 @@ def upload_backup(local_path):
         req.add_header("User-Agent", "XBBot-WebDAV-Backup/1.0")
         req.add_header("Content-Length", str(len(data)))
 
-        with urllib.request.urlopen(req, timeout=45, context=_make_ssl_context()) as resp:
+        with urllib.request.urlopen(req, timeout=25, context=_make_ssl_context()) as resp:
             status = getattr(resp, "status", getattr(resp, "code", 200))
             if status in (200, 201, 204):
                 sz_kb = len(data) // 1024
@@ -110,9 +110,14 @@ def upload_backup(local_path):
                 if _logger:
                     _logger.info(msg)
                 return True, msg
-            return False, f"WebDAV 服务器返回状态码: {status}"
+            return False, f"WebDAV 服务器返回非预期状态码: {status}"
     except urllib.error.HTTPError as e:
         msg = f"WebDAV 上传 HTTP 错误 {e.code}: {e.reason}"
+        if _logger:
+            _logger.error(msg)
+        return False, msg
+    except (urllib.error.URLError, TimeoutError) as e:
+        msg = f"WebDAV 上传网络超时或连接失败: {getattr(e, 'reason', e)}"
         if _logger:
             _logger.error(msg)
         return False, msg
@@ -136,15 +141,15 @@ def test_connection():
     base_url = url.rstrip("/")
 
     try:
-        # 使用 PROPFIND 或 OPTIONS 探测连接
+        # 使用 PROPFIND 探测标准 WebDAV 根/服务
         req = urllib.request.Request(base_url, method="PROPFIND")
         req.add_header("Authorization", auth)
         req.add_header("Depth", "0")
         req.add_header("User-Agent", "XBBot-WebDAV-Backup/1.0")
-        with urllib.request.urlopen(req, timeout=15, context=_make_ssl_context()) as resp:
+        with urllib.request.urlopen(req, timeout=8, context=_make_ssl_context()) as resp:
             status = getattr(resp, "status", getattr(resp, "code", 200))
             if status in (200, 207):
-                _ensure_remote_dir(base_url, rdir, auth)
+                _ensure_remote_dir(base_url, rdir, auth, timeout=6)
                 return True, f"WebDAV 连接与鉴权成功！服务器响应: {status} (目标目录: {rdir})"
             return False, f"WebDAV 响应非预期状态码: {status}"
     except urllib.error.HTTPError as e:
@@ -152,13 +157,21 @@ def test_connection():
             try:
                 req2 = urllib.request.Request(base_url, method="OPTIONS")
                 req2.add_header("Authorization", auth)
-                with urllib.request.urlopen(req2, timeout=15, context=_make_ssl_context()) as resp2:
+                with urllib.request.urlopen(req2, timeout=5, context=_make_ssl_context()) as resp2:
+                    _ensure_remote_dir(base_url, rdir, auth, timeout=6)
                     return True, f"WebDAV 连接成功！(OPTIONS 响应: {getattr(resp2, 'status', 200)})"
             except Exception as e2:
                 return False, f"WebDAV 认证或连接失败 (HTTP {e.code}): {e.reason}"
         if e.code == 401:
             return False, "WebDAV 用户名或应用密码错误 (HTTP 401 Unauthorized)"
+        if e.code == 403:
+            return False, "WebDAV 拒绝访问 (HTTP 403 Forbidden)"
+        if e.code == 404:
+            return False, "WebDAV 服务器路径不存在 (HTTP 404 Not Found)"
         return False, f"WebDAV HTTP 错误 {e.code}: {e.reason}"
+    except (urllib.error.URLError, TimeoutError) as e:
+        reason = getattr(e, 'reason', e)
+        return False, f"WebDAV 连接超时或目标主机无法连接（8秒超时）: {reason}"
     except Exception as e:
         return False, f"WebDAV 连接异常: {e}"
 

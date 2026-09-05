@@ -1188,6 +1188,10 @@ def backup_user_data(force=False):
             except Exception:
                 pass
         bck.close()
+        try:
+            clean_old_backups()
+        except Exception:
+            pass
         if dst and os.path.isfile(dst):
             try:
                 from .core import webdav as _wd
@@ -1202,6 +1206,50 @@ def backup_user_data(force=False):
     except Exception:
         return None
     return None
+
+def clean_old_backups(max_keep=None):
+    """自动清理旧备份，默认保留最新的 N 份 (默认 30 份)"""
+    if max_keep is None:
+        try:
+            max_keep = cfgi("备份配置", "保留备份数量", 30)
+        except Exception:
+            max_keep = 30
+    if max_keep <= 0:
+        max_keep = 30
+    if not BACKUP_DIR or not os.path.isdir(BACKUP_DIR):
+        return 0
+    all_backups = []
+    try:
+        for root, dirs, files in os.walk(BACKUP_DIR):
+            for fn in files:
+                if fn.endswith(".db"):
+                    fp = os.path.join(root, fn)
+                    try:
+                        mt = os.path.getmtime(fp)
+                        all_backups.append((mt, fp))
+                    except Exception:
+                        pass
+    except Exception:
+        return 0
+    if len(all_backups) <= max_keep:
+        return 0
+    all_backups.sort(key=lambda x: x[0])
+    to_del_count = len(all_backups) - max_keep
+    deleted = 0
+    for _, fp in all_backups[:to_del_count]:
+        try:
+            if os.path.isfile(fp):
+                os.remove(fp)
+                deleted += 1
+            pdir = os.path.dirname(fp)
+            if os.path.isdir(pdir) and not os.listdir(pdir):
+                try:
+                    os.rmdir(pdir)
+                except Exception:
+                    pass
+        except Exception:
+            pass
+    return deleted
 
 def maybe_auto_backup():
     return backup_user_data(force=False)
@@ -1335,5 +1383,5 @@ __all__ = ["register_names","register_name","parse_at","set_config","cfg","cfgi"
            "redpack_put","redpack_get",
            "init","flush_all","merge_from","get_persistent_data_dir","set_persistent_data_dir",
            "set_config_path","set_astrbot_config","sync_astrbot_config","set_ini","save_config",
-           "set_backup_dir","backup_user_data","maybe_auto_backup",
+           "set_backup_dir","backup_user_data","maybe_auto_backup","clean_old_backups",
            "recall_set","recall_get"]

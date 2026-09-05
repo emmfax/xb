@@ -1564,6 +1564,11 @@
         "default": 3,
         "description": "自动备份间隔(小时)"
       },
+      "保留备份数量": {
+        "type": "int",
+        "default": 30,
+        "description": "本地备份保留份数（超过此数量自动清理最旧备份，默认30条）"
+      },
       "WebDAV备份开关": {
         "type": "string",
         "default": "假",

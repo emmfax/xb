@@ -1437,7 +1437,7 @@ async function exportAllUsers() {
         count: usersList.length,
         users: usersList,
         export_at: res.export_at || Math.floor(Date.now() / 1000),
-        version: res.version || "0.68.20"
+        version: res.version || "0.68.21"
       };
       const jsonStr = JSON.stringify(payload, null, 2);
       triggerExportResult({
@@ -2963,6 +2963,33 @@ document.getElementById("btnBackupNow")?.addEventListener("click", async () => {
   }
 });
 document.getElementById("btnBackupRefresh")?.addEventListener("click", () => loadBackups(BACKUP_DIR));
+document.getElementById("btnWebDAVTest")?.addEventListener("click", async () => {
+  toast("正在连接测试 WebDAV...", "ok", 3000);
+  try {
+    const res = await getBridge().apiGet("backup/webdav/test", {});
+    if (res && res.ok) {
+      toast("WebDAV 测试成功: " + (res.msg || "连接正常"), "ok", 7000);
+    } else {
+      toast("WebDAV 测试失败: " + (res && res.msg ? res.msg : "未知错误"), "bad", 8000);
+    }
+  } catch (err) {
+    toast("WebDAV 测试异常: " + err.message, "bad", 8000);
+  }
+});
+document.getElementById("btnWebDAVBackupNow")?.addEventListener("click", async () => {
+  toast("正在生成本地冷备并上传至 WebDAV 云端...", "ok", 4000);
+  try {
+    const res = await getBridge().apiPost("backup/webdav/upload", {});
+    if (res && res.ok) {
+      toast("WebDAV 云备份成功: " + (res.msg || "已成功上传"), "ok", 7000);
+      await loadBackups("");
+    } else {
+      toast("WebDAV 上传失败: " + (res && res.msg ? res.msg : "未能完成上传"), "bad", 8000);
+    }
+  } catch (err) {
+    toast("WebDAV 上传异常: " + err.message, "bad", 8000);
+  }
+});
 document.getElementById("btnBackupExport")?.addEventListener("click", async () => {
   try {
     const data = await getBridge().apiGet("users/export", {});

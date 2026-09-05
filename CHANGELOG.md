@@ -1,5 +1,18 @@
 # 更新日志
 
+## v0.68.21
+- ⚡ **彻底根治 56 秒 Event Loop 阻塞（`Event loop lag detected: 56.067s`）与卡死**：
+  - **解耦主事件循环与自动备份执行链路**：将原先潜伏在主消息分发路径（`_dispatch`）中的 `maybe_auto_backup()` 彻底剔除，改为在插件初始化阶段启动独立后台守护线程（`xb-auto-backup`）定期检测与执行，主事件循环分发消息耗时恢复至 0ms 纯内存处理；
+  - **名片变更与数据库写入全面异步化**：在主消息接收头部提取群名片与昵称时，内存字典缓存瞬时同步（0ms），将 `ST.register_name` 与 `slave.save(gid)` 底层写库剥离至后台线程执行，主事件循环 0 磁盘 I/O、0 锁等待；
+  - **WebDAV 与版本检测网络请求全面 `asyncio.to_thread` 异步化**：将 `handle_webdav_test`、`handle_webdav_backup_now`、`handle_version_check` 等 Web API 接口全面封装为异步线程池执行，坚决杜绝因网络延迟、DNS 寻址或握手挂起造成主循环假死；
+  - **WebDAV 网络超时与异常诊断深度优化**：PROPFIND 探测超时缩短至 8 秒，PUT 上传超时优化至 25 秒，并细化网络超时与拒绝访问的中文错误诊断。
+- 📦 **新增备份自动保留策略（默认保留最新 30 份数据）**：
+  - **自动清理超期备份 `clean_old_backups`**：在 `备份配置` 中新增 `保留备份数量`（默认 30 条），每次生成新冷备时自动扫描备份目录，超出保留份数时按时间戳自动清理最旧的 `.db` 备份文件并自动回收清理空日期目录；
+  - **可配置化与热生效**：可在 WebUI 控制台或配置文件中按需自定义保留份数（如 10、30、50），填 0 或负数自动兜底为 30。
+- ☁️ **WebUI 控制台新增 WebDAV 测试与一键云备份按钮**：
+  - 在「备份管理」Tab 工具栏新增【☁️ 测试 WebDAV】与【☁️ 立即上传云端】快捷按钮，并补充清晰的操作状态 Toast 提示反馈；
+  - 后端补齐注册 Web API 路由（`/backup/webdav/test`、`/backup/webdav/upload`、`/backups/webdav/*`），打通前端 Web 控制台直连。
+
 ## v0.68.20
 - 🛡️ **彻底根治并发事务冲突与 `cannot rollback - no transaction is active` 错误**：
   - **切除 `_ensure_db()` 跨线程无锁回滚炸弹**：深入定位发现旧版 `_ensure_db()` 在无锁状态下盲目检查 `in_transaction` 并调用 `rollback()`，当用户快速连续发送「签到」与「领取新手礼包」时，后一线程瞬间强行回滚了前一线程正在执行的活跃事务，导致 SQLite 抛出 `cannot rollback - no transaction is active` 且引发全库死锁；新版彻底切除该破坏性逻辑，保障并发事务安全；

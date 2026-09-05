@@ -126,20 +126,24 @@ def _append_at_segments(raw, event, gid="", slave_mod=None):
                             old = sm.NOTE_NAMES.get(q, "")
                             sm.NOTE_NAMES[q] = nm
                             if old != nm:
-                                try:
-                                    st = sm.state(gid)
-                                    if st.has_section(q):
-                                        u = st[q]
-                                        if u.get("name", "") != nm:
-                                            u["name"] = nm
-                                            sm.save(gid)
-                                except Exception:
-                                    pass
-                        try:
-                            import store as _st_reg
-                            _st_reg.register_name(q, nm)
-                        except Exception:
-                            pass
+                                def _bg_save_card(g, target_q, target_nm):
+                                    try:
+                                        if sm is not None and g:
+                                            st = sm.state(g)
+                                            if st.has_section(target_q):
+                                                u = st[target_q]
+                                                if u.get("name", "") != target_nm:
+                                                    u["name"] = target_nm
+                                                    sm.save(g)
+                                    except Exception:
+                                        pass
+                                    try:
+                                        import store as _st_reg
+                                        _st_reg.register_name(target_q, target_nm)
+                                    except Exception:
+                                        pass
+                                import threading
+                                threading.Thread(target=_bg_save_card, args=(gid, q, nm), daemon=True).start()
                 except Exception:
                     pass
         if ats:

@@ -108,7 +108,7 @@ def _raw_file_response(data_bytes, filename):
 PLUGIN_ID = "astrbot_plugin_xbbot"
 PLUGIN_DESC = "小白(奴/签/银/娱/私/灵/骑/超管/帮派/冒险+主菜单+WebUI), 现代SQLite存储"
 PLUGIN_AUTHOR = "Light"
-PLUGIN_VERSION = "0.68.20"
+PLUGIN_VERSION = "0.68.21"
 PLUGIN_REPO = "https://github.com/emmfax/xb"
 
 # 复用 router 的主菜单，保持单源
@@ -229,6 +229,10 @@ class XbBot(Star):
         context.register_web_api(f"/{PLUGIN_ID}/backups/delete", self.page_backups_delete, ["POST"], "删除备份")
         context.register_web_api(f"/{PLUGIN_ID}/backups/export", self.page_backups_export, ["GET", "POST"], "导出备份")
         context.register_web_api(f"/{PLUGIN_ID}/backups/doctor", self.page_db_doctor, ["POST", "GET"], "数据库健康体检与碎片整理")
+        context.register_web_api(f"/{PLUGIN_ID}/backup/webdav/test", self.page_webdav_test, ["GET", "POST"], "测试WebDAV连接")
+        context.register_web_api(f"/{PLUGIN_ID}/backup/webdav/upload", self.page_webdav_backup_now, ["POST"], "立即上传WebDAV备份")
+        context.register_web_api(f"/{PLUGIN_ID}/backups/webdav/test", self.page_webdav_test, ["GET", "POST"], "测试WebDAV连接")
+        context.register_web_api(f"/{PLUGIN_ID}/backups/webdav/upload", self.page_webdav_backup_now, ["POST"], "立即上传WebDAV备份")
         context.register_web_api(f"/{PLUGIN_ID}/import/legacy", self.page_import_legacy, ["POST"], "旧库导入（兼容新旧格式）")
         context.register_web_api(f"/{PLUGIN_ID}/slave/users", self.page_slave_users, ["GET"], "奴隶用户列表")
         context.register_web_api(f"/{PLUGIN_ID}/slave/calibrate", self.page_slave_calibrate, ["POST", "GET"], "一键校准全员身价")
@@ -241,7 +245,19 @@ class XbBot(Star):
         context.register_web_api(f"/{PLUGIN_ID}/logs", self.page_logs_get, ["GET", "POST"], "获取插件运行日志")
         context.register_web_api(f"/{PLUGIN_ID}/logs/clear", self.page_logs_clear, ["POST", "GET"], "清空插件运行日志")
         context.register_web_api(f"/{PLUGIN_ID}/logs/export", self.page_logs_export, ["GET", "POST"], "导出插件运行日志")
-        ST.set_backup_dir(os.path.join(_BASE, "data", "backups"))
+
+        # 后台独立守护线程执行自动备份与超期清理，绝不阻塞主消息循环与事件分发
+        def _bg_auto_backup_worker():
+            import time
+            while True:
+                time.sleep(60)
+                try:
+                    ST.maybe_auto_backup()
+                except Exception:
+                    pass
+        import threading
+        t_bg_bck = threading.Thread(target=_bg_auto_backup_worker, daemon=True, name="xb-auto-backup")
+        t_bg_bck.start()
 
     def _extract_bot_uin_sync(self, event):
         if getattr(slave, "BOT_UIN", ""):
@@ -304,23 +320,26 @@ class XbBot(Star):
                 old = slave.NOTE_NAMES.get(qq, "")
                 if old != card:
                     slave.NOTE_NAMES[qq] = card
-                    try:
-                        ST.register_name(qq, card)
-                    except Exception:
+                    def _bg_update_user_name(g, q, c, o):
                         try:
-                            ST._register_single(qq, card)
+                            ST.register_name(q, c)
                         except Exception:
-                            pass
-                    if old:
-                        try:
-                            st = slave.state(gid)
-                            if st.has_section(qq):
-                                u = st[qq]
-                                if u.get("name", "") != card:
-                                    u["name"] = card
-                                    slave.save(gid)
-                        except Exception:
-                            pass
+                            try:
+                                ST._register_single(q, c)
+                            except Exception:
+                                pass
+                        if o and g and g != "dm":
+                            try:
+                                st = slave.state(g)
+                                if st.has_section(q):
+                                    u = st[q]
+                                    if u.get("name", "") != c:
+                                        u["name"] = c
+                                        slave.save(g)
+                            except Exception:
+                                pass
+                    import threading
+                    threading.Thread(target=_bg_update_user_name, args=(gid, qq, card, old), daemon=True).start()
             slave.mark_known(gid, qq)
             raw = event.message_str or ""
             raw = _append_at_segments(raw, event, gid)
@@ -466,11 +485,6 @@ class XbBot(Star):
                         pass
                     yield event.plain_result(f"超管列表异常: {e}")
                     return
-            if time.time() - getattr(ST, "_LAST_BACKUP_CHECK", 0) >= 60:
-                try:
-                    ST.maybe_auto_backup()
-                except Exception:
-                    pass
             reply = await asyncio.get_running_loop().run_in_executor(None, handle, gid, qq, raw, is_private, is_admin)
             if not reply and not is_private:
                 try:

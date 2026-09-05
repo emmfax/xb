@@ -33,7 +33,7 @@ def _get_local_version(plugin_base=""):
                     return line.split(":", 1)[1].strip().strip('"').strip("'")
     except Exception:
         pass
-    return "0.68.20"
+    return "0.68.21"
 
 
 def _parse_version_tuple(v_str):
@@ -123,13 +123,22 @@ def check_latest_version(plugin_base=""):
 
 
 async def handle_version_check(request=None, plugin_base=""):
-    """从云端检测是否有最新 Release 或 main 分支版本"""
+    """从云端检测是否有最新 Release 或 main 分支版本（完全异步化，绝不阻塞主事件循环）"""
     global _LAST_CHECK_RES, _LAST_CHECK_TIME
     now = time.time()
     if _LAST_CHECK_RES is not None and (now - _LAST_CHECK_TIME) < _CHECK_CACHE_TTL:
         return json_response(_LAST_CHECK_RES)
 
-    res = check_latest_version(plugin_base)
+    import asyncio
+    try:
+        res = await asyncio.to_thread(check_latest_version, plugin_base)
+    except Exception as e:
+        res = {
+            "current_version": _get_local_version(plugin_base),
+            "latest_version": _get_local_version(plugin_base),
+            "has_update": False,
+            "error": str(e)
+        }
     _LAST_CHECK_RES = res
     _LAST_CHECK_TIME = now
     return json_response(res)

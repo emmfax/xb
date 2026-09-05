@@ -17,7 +17,7 @@ except ImportError:
     except ImportError:
         import slave  # type: ignore
 
-PLUGIN_VERSION = "0.68.20"
+PLUGIN_VERSION = "0.68.21"
 
 
 def _extract_param(request, key, default=""):

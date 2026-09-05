@@ -1570,7 +1570,7 @@
   <div class="wrap">
     <header>
       <div class="brand">
-        <h1>管理控制台 <span class="ver">v0.68.20</span> <span id="verBadge" style="display:none;font-size:11px;padding:3px 8px;border-radius:12px;background:linear-gradient(135deg, #10B981, #059669);color:#fff;font-weight:600;cursor:pointer;margin-left:4px;box-shadow:0 2px 6px rgba(16,185,129,0.3)" title="点击查看更新并一键升级">🚀 发现新版本</span></h1>
+        <h1>管理控制台 <span class="ver">v0.68.21</span> <span id="verBadge" style="display:none;font-size:11px;padding:3px 8px;border-radius:12px;background:linear-gradient(135deg, #10B981, #059669);color:#fff;font-weight:600;cursor:pointer;margin-left:4px;box-shadow:0 2px 6px rgba(16,185,129,0.3)" title="点击查看更新并一键升级">🚀 发现新版本</span></h1>
         <div class="sub">
           <span class="status-badge"><span class="status-dot"></span> 运行正常</span>
         </div>
@@ -1930,12 +1930,14 @@
             <button id="btnBackupRefresh" class="ghost">🔄 刷新</button>
             <button id="btnBackupRestore" class="ghost">🔄 恢复选中</button>
             <button id="btnBackupExportSel" class="ghost">📥 导出</button>
+            <button id="btnWebDAVTest" class="ghost" style="color:var(--primary);border-color:var(--primarySoft);font-weight:600">☁️ 测试 WebDAV</button>
+            <button id="btnWebDAVBackupNow" class="ghost">☁️ 立即上传云端</button>
           </div>
           <div style="display:flex;gap:5px;margin-left:auto;flex-wrap:wrap">
             <button id="btnBackupDelete" class="ghost del">🗑️ 删除选中</button>
           </div>
         </div>
-        <div class="hint">系统每 3 小时自动增量冷备（或发送 `备份xb`）归档至 <code>data/backups/YYYY-MM-DD/HHMMSS.db</code>，点击文件项可快速恢复或单独导出。</div>
+        <div class="hint">系统每 3 小时自动增量冷备（或发送 `备份xb`）归档至 <code>data/backups/YYYY-MM-DD/HHMMSS.db</code>，默认自动保留最新 30 份数据并自动清理过期冷备。支持 WebDAV 自动云端备份（坚果云/Alist/NAS等），点击文件项可快速恢复或单独导出。</div>
         <div class="hint crumbs" id="backupCrumbs" style="margin:5px 0 8px"></div>
         <div class="search"><span>🔍</span><input id="backupSearch" placeholder="搜索日期目录 / 备份文件名…" /></div>
         <div id="backupBrowser"></div>
