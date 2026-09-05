@@ -108,7 +108,7 @@ def _raw_file_response(data_bytes, filename):
 PLUGIN_ID = "astrbot_plugin_xbbot"
 PLUGIN_DESC = "小白(奴/签/银/娱/私/灵/骑/超管/帮派/冒险+主菜单+WebUI), 现代SQLite存储"
 PLUGIN_AUTHOR = "Light"
-PLUGIN_VERSION = "0.68.17"
+PLUGIN_VERSION = "0.68.18"
 PLUGIN_REPO = "https://github.com/emmfax/xb"
 
 # 复用 router 的主菜单，保持单源
@@ -277,36 +277,6 @@ class XbBot(Star):
                 return True
         return False
 
-    async def _ensure_bot_uin(self, event):
-        # 极速同步提取（0ms），绝不阻塞消息主链路
-        if self._extract_bot_uin_sync(event):
-            return
-        if getattr(self, "_bot_uin_fetching", False):
-            return
-        self._bot_uin_fetching = True
-        bot = getattr(event, "bot", None)
-        if bot is not None:
-            asyncio.create_task(self._bg_fetch_bot_uin(bot))
-
-    async def _bg_fetch_bot_uin(self, bot):
-        try:
-            info = await bot.call_action("get_login_info")
-            d = (info.get("data") if isinstance(info, dict) else None) or info or {}
-            if isinstance(d, dict):
-                for k in ("user_id", "uin", "self_id", "qq"):
-                    vv = d.get(k)
-                    if vv and str(vv).isdigit() and 5 <= len(str(vv).strip()) <= 12:
-                        slave.BOT_UIN = str(vv).strip()
-                        try:
-                            slave.log(f"自动获取机器人QQ: {slave.BOT_UIN}")
-                        except Exception:
-                            pass
-                        break
-        except Exception:
-            pass
-        finally:
-            self._bot_uin_fetching = False
-
     async def _dispatch(self, event, is_private=False):
         try:
             try:
@@ -315,7 +285,7 @@ class XbBot(Star):
             except Exception:
                 pass
             try:
-                await self._ensure_bot_uin(event)
+                self._extract_bot_uin_sync(event)
             except Exception:
                 pass
             gid = str(event.get_group_id() or "") if not is_private else "dm"

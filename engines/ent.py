@@ -337,6 +337,20 @@ def _clean_expired_game(gid, max_seconds=180):
     """自动清理超时闲置或异常遗留的会话游戏锁，避免单群永久卡死"""
     cur = _active_game(gid)
     if not cur:
+        # 清理可能残留的孤儿键值，避免影响后续判断
+        try:
+            for k in ("chain_owner_", "trick_owner_", "miri_owner_", "guessnum_owner_", "quiz_owner_", "game24_owner_"):
+                if ST.recall_get(f"{k}{gid}"):
+                    ST.recall_set(f"{k}{gid}", "")
+            if ST.recall_get(f"chain_{gid}"):
+                ST.recall_set(f"chain_{gid}", "")
+                ST.recall_set(f"chain_start_{gid}", "")
+                ST.recall_set(f"chain_players_{gid}", "")
+                ST.recall_set(f"chain_used_{gid}", "")
+                ST.recall_set(f"chain_last_qq_{gid}", "")
+                ST.recall_set(f"chain_last_time_{gid}", "")
+        except Exception:
+            pass
         return False
     kind = _GAME_KIND_MAP.get(cur)
     if not kind:
@@ -349,8 +363,15 @@ def _clean_expired_game(gid, max_seconds=180):
         except Exception:
             start_ts = 0
         now = int(time.time())
-        # start_ts <= 0 属于脏数据/孤儿锁，或者距离开局超过 max_seconds，均清理
-        if start_ts <= 0 or (now - start_ts) > max_seconds:
+        last_time = 0
+        if kind == "chain":
+            try:
+                last_time = int(ST.recall_get(f"chain_last_time_{gid}", "0") or 0)
+            except Exception:
+                last_time = 0
+        effective_ts = max(start_ts, last_time)
+        # effective_ts <= 0 属于脏数据/孤儿锁，或者距离开局/最后互动超过 max_seconds，均清理
+        if effective_ts <= 0 or (now - effective_ts) > max_seconds:
             owner = ST.recall_get(f"{kind}_owner_{gid}", "")
             ST.recall_set(f"{kind}_owner_{gid}", "")
             ST.recall_set(f"{kind}_players_{gid}", "")
@@ -377,12 +398,12 @@ def _clean_expired_game(gid, max_seconds=180):
     return False
 
 
-def _check_single_game(gid, new_label):
+def _check_single_game(gid, new_label, sender_qq=None):
     _clean_expired_game(gid)
     cur = _active_game(gid)
     if cur and cur != new_label:
         return f"已有进行中的【{cur}】游戏，请先结束当前游戏再开新局！（发送【退出{cur}】结束）"
-    # 同类型已在进行中：检查是否已经无互动超过 60 秒，若超过则自动刷新重开
+    # 同类型已在进行中：检查是否开局者重开，或已无互动超过 60 秒，若符合则自动刷新重开
     if cur == new_label:
         kind = _GAME_KIND_MAP.get(cur, "")
         if kind:
@@ -391,7 +412,15 @@ def _check_single_game(gid, new_label):
                 start_ts = int(start_val or "0")
             except Exception:
                 start_ts = 0
-            if start_ts <= 0 or (int(time.time()) - start_ts) > 60:
+            last_time = 0
+            if kind == "chain":
+                try:
+                    last_time = int(ST.recall_get(f"chain_last_time_{gid}", "0") or 0)
+                except Exception:
+                    last_time = 0
+            owner = ST.recall_get(f"{kind}_owner_{gid}", "")
+            now = int(time.time())
+            if (sender_qq and str(owner) == str(sender_qq)) or (now - max(start_ts, last_time)) > 60:
                 _clean_expired_game(gid, max_seconds=0)
                 return None
         return f"已有进行中的【{cur}】游戏，请先完成或退出后再开新局！（发送【退出{cur}】可重新开局）"
@@ -588,7 +617,7 @@ def handle(gid, qq, raw):
         return cmd_bomb(gid, qq, text[3:].strip())
     # ---- 会话类游戏 ----
     if text.startswith("开始接龙"):
-        chk = _check_single_game(gid, "接龙")
+        chk = _check_single_game(gid, "接龙", sender_qq=qq)
         if chk:
             return chk
         err = _ent_cost(gid, qq, "接龙")
@@ -606,33 +635,61 @@ def handle(gid, qq, raw):
         return (f"🧩 接龙开始！机器人先出词：【{first}】\r\n"
                 f"请用尾字「{first[-1]}」接龙（词语2-6字）！\r\n"
                 "其他玩家请在 30 秒内发送【加入接龙】加入！发送【退出接龙】结束。")
-    if text == "加入接龙":
+    if text in ("加入接龙", "我加入接龙"):
+        _clean_expired_game(gid)
+        cur = _active_game(gid)
+        if cur != "接龙":
+            return "当前群没有进行中的接龙游戏，发送【开始接龙】开启一局吧~"
         owner = ST.recall_get(f"chain_owner_{gid}")
+        last_word = ST.recall_get(f"chain_{gid}", "")
+        if not owner or not last_word:
+            _clean_expired_game(gid, max_seconds=0)
+            return "当前群没有进行中的接龙游戏，发送【开始接龙】开启一局吧~"
+        if str(owner) == str(qq):
+            return f"您是本局开局者，无需加入！当前词语为【{last_word}】，请用尾字「{last_word[-1]}」接龙~"
         start = ST.recall_get(f"chain_start_{gid}", "0")
-        if not owner or str(owner) == str(qq):
-            return "您是开局者，无需加入！"
         try:
             if int(time.time()) - int(start) > 30:
-                return "开局已超过30秒，无法加入，请等待下一局！"
+                return f"开局已超过30秒，无法加入！当前词语为【{last_word}】，请等待下一局~"
         except Exception:
             pass
         players = _get_players(gid, "chain_players_")
-        if str(qq) not in players:
-            players.append(str(qq))
-            ST.recall_set(f"chain_players_{gid}", ",".join(players))
-        return "你已加入接龙！发送一个词语接续吧~"
+        if str(qq) in players:
+            return f"您已加入本局接龙，请直接接龙！当前词语为【{last_word}】，尾字「{last_word[-1]}」~"
+        players.append(str(qq))
+        ST.recall_set(f"chain_players_{gid}", ",".join(players))
+        return f"你已加入接龙！当前词语为【{last_word}】，请用尾字「{last_word[-1]}」接龙（词语2-6字）~"
+    if text in ("当前接龙", "查接龙", "接龙进度", "接龙词"):
+        cur = _active_game(gid)
+        if cur != "接龙":
+            return "当前群没有进行中的接龙游戏，发送【开始接龙】开启一局吧~"
+        last_word = ST.recall_get(f"chain_{gid}", "")
+        if not last_word:
+            return "当前群没有进行中的接龙游戏，发送【开始接龙】开启一局吧~"
+        return f"当前接龙词语为【{last_word}】，请用尾字「{last_word[-1]}」接龙（词语2-6字）~"
     if text in ("结束接龙", "退出接龙"):
-        ST.recall_set(f"chain_owner_{gid}", "")
-        ST.recall_set(f"chain_{gid}", "")
-        ST.recall_set(f"chain_start_{gid}", "")
-        ST.recall_set(f"chain_players_{gid}", "")
-        ST.recall_set(f"chain_used_{gid}", "")
-        ST.recall_set(f"chain_last_qq_{gid}", "")
-        ST.recall_set(f"chain_last_time_{gid}", "")
-        _clear_active_game(gid)
-        return "接龙结束！"
+        owner = ST.recall_get(f"chain_owner_{gid}")
+        if not owner:
+            _clear_active_game(gid)
+            return "当前没有进行中的接龙游戏！"
+        if str(owner) == str(qq):
+            ST.recall_set(f"chain_owner_{gid}", "")
+            ST.recall_set(f"chain_{gid}", "")
+            ST.recall_set(f"chain_start_{gid}", "")
+            ST.recall_set(f"chain_players_{gid}", "")
+            ST.recall_set(f"chain_used_{gid}", "")
+            ST.recall_set(f"chain_last_qq_{gid}", "")
+            ST.recall_set(f"chain_last_time_{gid}", "")
+            _clear_active_game(gid)
+            return "开局者退出了接龙，接龙结束！"
+        else:
+            players = _get_players(gid, "chain_players_")
+            if str(qq) in players:
+                players.remove(str(qq))
+                ST.recall_set(f"chain_players_{gid}", ",".join(players))
+            return "你已退出接龙！"
     if text.startswith("开始急转弯"):
-        chk = _check_single_game(gid, "急转弯")
+        chk = _check_single_game(gid, "急转弯", sender_qq=qq)
         if chk:
             return chk
         err = _ent_cost(gid, qq, "急转弯")
@@ -646,7 +703,7 @@ def handle(gid, qq, raw):
         _set_active_game(gid, "急转弯")
         return "🤔 急转弯：" + q + "\r\n回复你的答案！（其他玩家30秒内发送【加入急转弯】加入）"
     if text.startswith("开始猜字谜"):
-        chk = _check_single_game(gid, "猜字谜")
+        chk = _check_single_game(gid, "猜字谜", sender_qq=qq)
         if chk:
             return chk
         err = _ent_cost(gid, qq, "猜字谜")
@@ -660,7 +717,7 @@ def handle(gid, qq, raw):
         _set_active_game(gid, "猜字谜")
         return "🔤 字谜：" + q + "\r\n回复你的答案！（其他玩家30秒内发送【加入字谜】加入）"
     if text.startswith("开始猜数"):
-        chk = _check_single_game(gid, "猜数")
+        chk = _check_single_game(gid, "猜数", sender_qq=qq)
         if chk:
             return chk
         err = _ent_cost(gid, qq, "猜数")
@@ -676,7 +733,7 @@ def handle(gid, qq, raw):
                 "请你回复一个数字来猜，我会提示大了/小了！\r\n"
                 "（其他玩家30秒内发送【加入猜数】加入，发送【退出猜数】结束）")
     if text.startswith("开始答题"):
-        chk = _check_single_game(gid, "答题")
+        chk = _check_single_game(gid, "答题", sender_qq=qq)
         if chk:
             return chk
         err = _ent_cost(gid, qq, "答题")
@@ -742,12 +799,12 @@ def handle(gid, qq, raw):
                 _clear_active_game(gid)
         return "已退出二四点！"
     if text.startswith("开始二四点"):
-        chk = _check_single_game(gid, "二四点")
+        chk = _check_single_game(gid, "二四点", sender_qq=qq)
         if chk:
             return chk
         return _start_24(gid, qq)
     if text.startswith("二四点"):
-        chk = _check_single_game(gid, "二四点")
+        chk = _check_single_game(gid, "二四点", sender_qq=qq)
         if chk:
             return chk
         return _start_24(gid, qq)
@@ -1071,7 +1128,10 @@ def _play(gid, qq, text):
                 S.recall_set(f"chain_last_qq_{gid}", str(qq))
                 S.recall_set(f"chain_last_time_{gid}", str(now))
 
-                coin = 50
-                _reward(gid, qq, coin, 0)
+                coin = S.cfgi("娱乐配置", "接龙奖励金币", 50)
+                meili = S.cfgi("娱乐配置", "接龙奖励魅力", 0)
+                _reward(gid, qq, coin, meili)
+                if meili > 0:
+                    return f"→ {text} 奖励{coin}{S.coin_name()} 魅力+{meili}"
                 return f"→ {text} 奖励{coin}{S.coin_name()}"
             return None
