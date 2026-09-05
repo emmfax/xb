@@ -558,8 +558,9 @@ def cmd_rank(gid, kind):
     label = {"等级": "等级", "生命": "生命", "攻击": "攻击", "防御": "防御",
              "特攻": "特攻", "特防": "特防", "总战力": "总战力", "战力": "总战力"}.get(kind, "总战力")
     # 批量单次查询+内存解析（原每行2次json.loads+list遍历，500人~35ms→8ms）
-    rows = ST._DB.execute("SELECT qq, data FROM accounts WHERE gid=?",
-                          (int(gid),)).fetchall() if ST._DB else []
+    with ST._LOCK:
+        rows = ST._DB.execute("SELECT qq, data FROM accounts WHERE gid=?",
+                              (int(gid),)).fetchall() if ST._DB else []
     keymap = {"等级": "level", "生命": "hp", "攻击": "atk", "防御": "def",
               "特攻": "spa", "特防": "spd"}
     kfield = keymap.get(kind, "level")

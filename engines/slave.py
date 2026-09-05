@@ -228,13 +228,14 @@ def exists_user(gid, qq):
                             return True
                     else:
                         return True
-            # 再查 DB 钱包/账户是否存在实质数据
+            # 再查 DB 钱包/账户是否存在实质数据（持锁读，避免跨线程 database is locked）
             try:
                 if store._DB is not None:
-                    row = store._DB.execute("SELECT 1 FROM wallet WHERE gid=? AND qq=?", (int(gid), int(qq))).fetchone()
+                    with store._LOCK:
+                        row = store._DB.execute("SELECT 1 FROM wallet WHERE gid=? AND qq=?", (int(gid), int(qq))).fetchone()
+                        row2 = store._DB.execute("SELECT 1 FROM accounts WHERE gid=? AND qq=?", (int(gid), int(qq))).fetchone() if not row else None
                     if row:
                         return True
-                    row2 = store._DB.execute("SELECT 1 FROM accounts WHERE gid=? AND qq=?", (int(gid), int(qq))).fetchone()
                     if row2:
                         return True
             except Exception:

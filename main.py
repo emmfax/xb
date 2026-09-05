@@ -108,7 +108,7 @@ def _raw_file_response(data_bytes, filename):
 PLUGIN_ID = "astrbot_plugin_xbbot"
 PLUGIN_DESC = "小白(奴/签/银/娱/私/灵/骑/超管/帮派/冒险+主菜单+WebUI), 现代SQLite存储"
 PLUGIN_AUTHOR = "Light"
-PLUGIN_VERSION = "0.68.21"
+PLUGIN_VERSION = "0.68.22"
 PLUGIN_REPO = "https://github.com/emmfax/xb"
 
 # 复用 router 的主菜单，保持单源
@@ -441,7 +441,8 @@ class XbBot(Star):
                         pass
                     admins = []
                     try:
-                        rows = ST._DB.execute("SELECT k, v FROM kv WHERE k LIKE 'admin_%'").fetchall() if ST._DB else []
+                        with ST._LOCK:
+                            rows = ST._DB.execute("SELECT k, v FROM kv WHERE k LIKE 'admin_%'").fetchall() if ST._DB else []
                         for k, v in rows:
                             try:
                                 q = k.split("_", 1)[1]

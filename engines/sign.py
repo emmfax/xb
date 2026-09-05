@@ -282,16 +282,37 @@ def cmd_newbie(gid, qq):
     a = _acct(gid, qq)
     if a.get("novice_gift", "") == "1":
         return "亲，您已经领取过新手礼包了，无法再次领取！"
-    a.set("novice_gift", "1")
     money = ST.cfgi("新手配置", "现金", ST.cfgi("新手配置", "新手金币", ST.cfgi("新手配置", "money", 3000)))
     tili = ST.cfgi("新手配置", "体力", ST.cfgi("新手配置", "新手体力", ST.cfgi("新手配置", "stamina", 100)))
     meili = ST.cfgi("新手配置", "魅力", ST.cfgi("新手配置", "新手魅力", ST.cfgi("新手配置", "charm", 50)))
     jq = ST.cfgi("新手配置", "奖券", ST.cfgi("新手配置", "新手奖券", ST.cfgi("新手配置", "lottery_tickets", 5)))
-    ST.coins_add(gid, qq, money)
-    ST.acct_add(gid, qq, "stamina", tili)
-    ST.acct_add(gid, qq, "charm", meili)
-    ST.acct_add(gid, qq, "lottery_tickets", jq)
-    ST.acct_save(gid, qq)
+    # 单事务原子领取：钱包+账户同锁一次提交，避免签到并发时 database is locked
+    try:
+        cur_stam = int(float(a.get("stamina", "0") or 0))
+        cur_charm = int(float(a.get("charm", "0") or 0))
+        cur_juan = int(float(a.get("lottery_tickets", "0") or 0))
+        ST.txn_coins_acct(gid, qq, money, {
+            "novice_gift": "1",
+            "stamina": str(cur_stam + tili),
+            "charm": str(cur_charm + meili),
+            "lottery_tickets": str(cur_juan + jq),
+        })
+        # txn 内已覆盖 novice 标记，刷新内存避免旧对象覆盖
+        try:
+            a.set("novice_gift", "1")
+            a.set("stamina", str(cur_stam + tili))
+            a.set("charm", str(cur_charm + meili))
+            a.set("lottery_tickets", str(cur_juan + jq))
+            a.dirty = False
+        except Exception:
+            pass
+    except Exception:
+        a.set("novice_gift", "1")
+        ST.coins_add(gid, qq, money)
+        ST.acct_add(gid, qq, "stamina", tili)
+        ST.acct_add(gid, qq, "charm", meili)
+        ST.acct_add(gid, qq, "lottery_tickets", jq)
+        ST.acct_save(gid, qq)
     return (f"恭喜您获得新手礼包一份！\r\n"
             f"{ST.coin_name()}+{money}\r\n体力+{tili}\r\n魅力+{meili}\r\n奖券+{jq}")
 
@@ -377,9 +398,10 @@ def _rank_by(gid, fn, name, topn=10):
     try:
         if ST._DB is not None and name in ("财富", "签到", "体力", "魅力", "发言"):
             import json as _js
-            wallet_rows = ST._DB.execute("SELECT qq, money FROM wallet WHERE gid=?", (int(gid),)).fetchall()
+            with ST._LOCK:
+                wallet_rows = ST._DB.execute("SELECT qq, money FROM wallet WHERE gid=?", (int(gid),)).fetchall()
+                acct_rows = ST._DB.execute("SELECT qq, data FROM accounts WHERE gid=?", (int(gid),)).fetchall()
             wallet_map = {str(qq): int(money or 0) for qq, money in wallet_rows}
-            acct_rows = ST._DB.execute("SELECT qq, data FROM accounts WHERE gid=?", (int(gid),)).fetchall()
             acct_data = {}
             for qq, data in acct_rows:
                 try:
@@ -408,8 +430,9 @@ def _rank_by(gid, fn, name, topn=10):
                     lst.append((v, q))
             lst.sort(reverse=True)
         else:
-            rows = ST._DB.execute("SELECT DISTINCT qq FROM accounts WHERE gid=?",
-                                  (int(gid),)).fetchall() if ST._DB else []
+            with ST._LOCK:
+                rows = ST._DB.execute("SELECT DISTINCT qq FROM accounts WHERE gid=?",
+                                      (int(gid),)).fetchall() if ST._DB else []
             qqs = [str(r[0]) for r in rows]
             for q in qqs:
                 lst.append((fn(gid, q), q))
@@ -417,8 +440,9 @@ def _rank_by(gid, fn, name, topn=10):
     except Exception:
         # 回退旧逻辑
         try:
-            rows = ST._DB.execute("SELECT DISTINCT qq FROM accounts WHERE gid=?",
-                                  (int(gid),)).fetchall() if ST._DB else []
+            with ST._LOCK:
+                rows = ST._DB.execute("SELECT DISTINCT qq FROM accounts WHERE gid=?",
+                                      (int(gid),)).fetchall() if ST._DB else []
             qqs = [str(r[0]) for r in rows]
             for q in qqs:
                 lst.append((fn(gid, q), q))
@@ -485,9 +509,10 @@ def cmd_mine_rank(gid, qq):
     """个人排行: 单次批量取所有人4项，避免4×N+1"""
     try:
         import json as _js2
-        wallet_rows = ST._DB.execute("SELECT qq, money FROM wallet WHERE gid=?", (int(gid),)).fetchall() if ST._DB else []
+        with ST._LOCK:
+            wallet_rows = ST._DB.execute("SELECT qq, money FROM wallet WHERE gid=?", (int(gid),)).fetchall() if ST._DB else []
+            acct_rows = ST._DB.execute("SELECT qq, data FROM accounts WHERE gid=?", (int(gid),)).fetchall() if ST._DB else []
         wallet_map = {str(q): int(m or 0) for q, m in wallet_rows}
-        acct_rows = ST._DB.execute("SELECT qq, data FROM accounts WHERE gid=?", (int(gid),)).fetchall() if ST._DB else []
         acct_data = {}
         for q_, data in acct_rows:
             try:
@@ -528,8 +553,9 @@ def cmd_mine_rank(gid, qq):
     except Exception:
         # 回退旧逻辑
         def _rank_pos(keyfn, order="desc"):
-            rows = ST._DB.execute("SELECT DISTINCT qq FROM accounts WHERE gid=?",
-                                  (int(gid),)).fetchall() if ST._DB else []
+            with ST._LOCK:
+                rows = ST._DB.execute("SELECT DISTINCT qq FROM accounts WHERE gid=?",
+                                      (int(gid),)).fetchall() if ST._DB else []
             qqs = [str(r[0]) for r in rows]
             if str(qq) not in qqs:
                 qqs.append(str(qq))

@@ -244,8 +244,9 @@ def cmd_end(gid, qq):
 def cmd_rank(gid, qq):
     if ST._DB is None:
         return "暂无数据。"
-    rows = ST._DB.execute("SELECT qq, data FROM accounts WHERE gid=?",
-                          (int(gid),)).fetchall()
+    with ST._LOCK:
+        rows = ST._DB.execute("SELECT qq, data FROM accounts WHERE gid=?",
+                              (int(gid),)).fetchall()
     lst = []
     for q, data in rows:
         try:

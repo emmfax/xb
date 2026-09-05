@@ -299,10 +299,14 @@ def coins_add(gid, qq, delta):
     with _LOCK:
         if _DB is None:
             return 0
+        cur = 0
         try:
             row = _DB.execute("SELECT money FROM wallet WHERE gid=? AND qq=?",
                               (int(gid), int(qq))).fetchone()
             cur = int(row[0]) if row else 0
+        except Exception:
+            return cur
+        try:
             newv = cur + int(delta)
             if newv < 0:
                 newv = 0
@@ -316,12 +320,7 @@ def coins_add(gid, qq, delta):
             return newv
         except Exception:
             _safe_rollback()
-            try:
-                row = _DB.execute("SELECT money FROM wallet WHERE gid=? AND qq=?",
-                                  (int(gid), int(qq))).fetchone()
-                return int(row[0]) if row else 0
-            except Exception:
-                return 0
+            return cur
 
 def txn_coins_acct(gid, qq, delta_coins=0, acct_updates=None):
     """原子事务：钱包 delta + 账户 kv 批量更新，同持 _LOCK 一次提交"""
@@ -783,7 +782,7 @@ def redpack_put(gid, qq, pwd, amount):
             _DB.execute("DELETE FROM redpacks WHERE ts < ?", (int(time.time()) - 86400,))
             _DB.execute("INSERT INTO redpacks(gid, qq, pwd, amount, ts) VALUES(?,?,?,?,?)",
                         (int(gid), int(qq), str(pwd), int(amount), int(time.time())))
-            _DB.commit()
+            _safe_commit()
             return True
         except Exception:
             _safe_rollback()
@@ -1175,19 +1174,42 @@ def backup_user_data(force=False):
         dst = os.path.join(day_dir, fname)
         import sqlite3 as _sql
         bck = _sql.connect(dst, timeout=30.0)
+        # 非阻塞冷备：仅短持锁做 checkpoint+commit，备份经独立读连接执行，不阻塞消息分发
         with _LOCK:
             try:
                 _DB.execute("PRAGMA wal_checkpoint(PASSIVE)")
                 _safe_commit()
             except Exception:
                 pass
-            _DB.backup(bck)
-            _last_backup = now
+            src_path = _DB_PATH
+        try:
+            src2 = _sql.connect(src_path, timeout=30.0)
             try:
-                recall_set("last_backup_ts", str(int(now)))
+                src2.execute("PRAGMA query_only=ON")
             except Exception:
                 pass
-        bck.close()
+            src2.backup(bck)
+            try:
+                src2.close()
+            except Exception:
+                pass
+        except Exception:
+            # 降级：短持锁直接备份（小库极快）
+            with _LOCK:
+                try:
+                    _DB.backup(bck)
+                except Exception:
+                    pass
+        with _LOCK:
+            _last_backup = now
+        try:
+            recall_set("last_backup_ts", str(int(now)))
+        except Exception:
+            pass
+        try:
+            bck.close()
+        except Exception:
+            pass
         try:
             clean_old_backups()
         except Exception:

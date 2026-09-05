@@ -96,9 +96,13 @@ def _j(data):
 def cmd_groups():
     if ST._DB is None:
         return "无数据。"
-    rows = ST._DB.execute(
-        "SELECT gid, COUNT(*) c FROM groups GROUP BY gid UNION ALL "
-        "SELECT gid, COUNT(*) FROM accounts GROUP BY gid").fetchall()
+    try:
+        with ST._LOCK:
+            rows = ST._DB.execute(
+                "SELECT gid, COUNT(*) c FROM groups GROUP BY gid UNION ALL "
+                "SELECT gid, COUNT(*) FROM accounts GROUP BY gid").fetchall()
+    except Exception:
+        return "暂无群数据。"
     seen = {}
     for gid, c in rows:
         seen[str(gid)] = seen.get(str(gid), 0) + int(c)
@@ -112,13 +116,18 @@ def cmd_groups():
 def cmd_stats():
     if ST._DB is None:
         return "无数据。"
-    nw = ST._DB.execute("SELECT COUNT(*) FROM wallet").fetchone()[0]
-    na = ST._DB.execute("SELECT COUNT(*) FROM accounts").fetchone()[0]
-    ng = ST._DB.execute("SELECT COUNT(DISTINCT gid) FROM accounts").fetchone()[0]
-    tm = ST._DB.execute("SELECT COALESCE(SUM(money),0) FROM wallet").fetchone()[0]
+    try:
+        with ST._LOCK:
+            nw = ST._DB.execute("SELECT COUNT(*) FROM wallet").fetchone()[0]
+            na = ST._DB.execute("SELECT COUNT(*) FROM accounts").fetchone()[0]
+            ng = ST._DB.execute("SELECT COUNT(DISTINCT gid) FROM accounts").fetchone()[0]
+            tm = ST._DB.execute("SELECT COALESCE(SUM(money),0) FROM wallet").fetchone()[0]
+    except Exception:
+        return "暂无统计数据。"
     # 兼容新旧键：deposit(英文化) 与 cunkuan(旧)，中文统计文案不变
     try:
-        td = ST._DB.execute("SELECT COALESCE(SUM(CAST(COALESCE(json_extract(data,'$.deposit'), json_extract(data,'$.cunkuan')) AS INTEGER)),0) FROM accounts").fetchone()[0] if ST._DB else 0
+        with ST._LOCK:
+            td = ST._DB.execute("SELECT COALESCE(SUM(CAST(COALESCE(json_extract(data,'$.deposit'), json_extract(data,'$.cunkuan')) AS INTEGER)),0) FROM accounts").fetchone()[0] if ST._DB else 0
         td = int(td or 0)
     except Exception:
         td = 0
@@ -422,10 +431,10 @@ def _version():
                 except Exception:
                     pass
         if not ver:
-            ver = "0.68.21"
+            ver = "0.68.22"
         return f"小白版本：{ver}"
     except Exception:
-        return "小白版本：0.68.21"
+        return "小白版本：0.68.22"
 
 # ---- 统一入口（测试指令仅超管，WebUI可配但不显示于MENU，已删 个人信息） ----
 _ADMIN_CMDS = ("群列表", "应用统计", "扣钱", "充钱", "清空", "重置", "禁言", "踢人", "备份xb", "备份", "测试webdav", "webdav测试", "开启维护", "关闭维护", "维护信息", "测试testxb", "测试testxb1", "测试testxb2", "测试testxb3", "测试testxb4", "测试testxb5", "测试testxb6", "测试testxb7", "测试testxb8", "超管列表")

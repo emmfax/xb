@@ -403,10 +403,12 @@ def _check_single_game(gid, new_label, sender_qq=None):
     cur = _active_game(gid)
     if cur and cur != new_label:
         return f"已有进行中的【{cur}】游戏，请先结束当前游戏再开新局！（发送【退出{cur}】结束）"
-    # 同类型已在进行中：检查是否开局者重开，或已无互动超过 60 秒，若符合则自动刷新重开
+    # 同类型已在进行中：检查是否开局者重开，或已无互动超过 30 秒，若符合则自动刷新重开
     if cur == new_label:
         kind = _GAME_KIND_MAP.get(cur, "")
         if kind:
+            now = int(time.time())
+            owner = ST.recall_get(f"{kind}_owner_{gid}", "")
             start_val = ST.recall_get(f"{kind}_start_{gid}", "0")
             try:
                 start_ts = int(start_val or "0")
@@ -419,7 +421,11 @@ def _check_single_game(gid, new_label, sender_qq=None):
                 except Exception:
                     last_time = 0
             # 开局者重开、或者超过30秒无互动、或者无有效owner残留，均直接瞬时刷新重开
-            if not owner or (sender_qq and str(owner) == str(sender_qq)) or (now - max(start_ts, last_time)) > 30:
+            try:
+                idle = now - max(start_ts, last_time) if max(start_ts, last_time) > 0 else 999
+            except Exception:
+                idle = 999
+            if (not owner) or (sender_qq and str(owner) == str(sender_qq)) or idle > 30:
                 _clean_expired_game(gid, max_seconds=0)
                 return None
         return f"已有进行中的【{cur}】游戏，请先完成或退出后再开新局！（发送【退出{cur}】可重新开局）"

@@ -69,8 +69,9 @@ def _members(gid, gname):
     if cached is not None and now - ts < _GUILD_TTL:
         # 从缓存过滤
         return [(qq, g) for qq, g in cached if g.get("name") == gname]
-    rows = ST._DB.execute("SELECT qq, data FROM accounts WHERE gid=?",
-                          (int(gid),)).fetchall() if ST._DB else []
+    with ST._LOCK:
+        rows = ST._DB.execute("SELECT qq, data FROM accounts WHERE gid=?",
+                              (int(gid),)).fetchall() if ST._DB else []
     all_members = []
     for qqdb, data in rows:
         try:
@@ -151,7 +152,8 @@ def cmd_list(gid, qq):
     if cached is not None and now - ts < _GUILD_TTL:
         all_members = cached
     else:
-        rows = ST._DB.execute("SELECT qq, data FROM accounts WHERE gid=?", (int(gid),)).fetchall()
+        with ST._LOCK:
+            rows = ST._DB.execute("SELECT qq, data FROM accounts WHERE gid=?", (int(gid),)).fetchall() if ST._DB else []
         all_members = []
         for qqdb, data in rows:
             try:
@@ -505,7 +507,8 @@ def cmd_rank(gid, kind):
     if cached is not None and now - ts < _GUILD_TTL:
         all_members = cached
     else:
-        rows = ST._DB.execute("SELECT qq, data FROM accounts WHERE gid=?", (int(gid),)).fetchall()
+        with ST._LOCK:
+            rows = ST._DB.execute("SELECT qq, data FROM accounts WHERE gid=?", (int(gid),)).fetchall() if ST._DB else []
         all_members = []
         for qqdb, data in rows:
             try:

@@ -362,8 +362,15 @@ def handle(gid, qq, raw, is_private=False, is_admin=False, store=None, engines=N
                 except Exception:
                     pass
                 # 若消息明确匹配该系统指令却执行崩溃，绝不可静默吞掉！向用户反馈错误提示
+                # 底层存储异常必须优雅降级为繁忙提示，严禁向群聊暴露 database is locked / rollback 等原始DB错误
                 if matched:
                     sysname = _SYS_ENG.get(_eng, _eng)
+                    try:
+                        msg_l = str(e).lower()
+                    except Exception:
+                        msg_l = ""
+                    if any(k in msg_l for k in ("database", "locked", "rollback", "transaction", "sqlite", "misuse", "owner", "not defined")):
+                        return f"【{sysname}系统】当前人数较多，系统繁忙，请稍后重试~"
                     return f"【{sysname}系统】处理指令时出现异常，请稍后重试（原因: {e}）"
                 r = None
             if r:
@@ -388,6 +395,12 @@ def handle(gid, qq, raw, is_private=False, is_admin=False, store=None, engines=N
                 except Exception:
                     pass
                 if matched_admin:
+                    try:
+                        _ml = str(e).lower()
+                    except Exception:
+                        _ml = ""
+                    if any(k in _ml for k in ("database", "locked", "rollback", "transaction", "sqlite", "misuse")):
+                        return "【超管系统】当前人数较多，系统繁忙，请稍后重试~"
                     return f"【超管系统】处理指令时出现异常，请稍后重试（原因: {e}）"
     elif engines and "superadmin" in engines:
         fn = engines["superadmin"]
@@ -408,5 +421,11 @@ def handle(gid, qq, raw, is_private=False, is_admin=False, store=None, engines=N
                 except Exception:
                     pass
                 if matched_admin:
+                    try:
+                        _ml2 = str(e).lower()
+                    except Exception:
+                        _ml2 = ""
+                    if any(k in _ml2 for k in ("database", "locked", "rollback", "transaction", "sqlite", "misuse")):
+                        return "【超管系统】当前人数较多，系统繁忙，请稍后重试~"
                     return f"【超管系统】处理指令时出现异常，请稍后重试（原因: {e}）"
     return None

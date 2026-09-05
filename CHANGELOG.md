@@ -1,5 +1,13 @@
 # 更新日志
 
+## v0.68.22
+- 🛡️ **彻底根治签到/新手礼包 `database is locked` 与接龙卡死（高并发事务串行化加固）**：
+  - **根除接龙 `NameError: owner/now` 重开炸弹**：修复 `ent._check_single_game` 未定义变量导致【开始接龙】永远报“已有进行中”、【结束接龙】报“没有进行中”的死锁假象，现 30 秒超时/开局者重开秒级自愈；
+  - **全引擎裸调 `_DB` 持锁串行化**：`bank/superadmin/slave/ride/guild/adventure/spirit/sign` 及 `main` 超管列表全部裸读/裸提交收口至 `with ST._LOCK` + `ST._safe_commit()`，根除跨线程 `database is locked` 与 `cannot rollback`；
+  - **新手礼包单事务原子化**：`sign.cmd_newbie` 由 5 次提交合并为 `txn_coins_acct` 一次提交，与签到抢锁冲突归零；
+  - **备份全程非阻塞化**：`store.backup_user_data` 仅短持锁做 checkpoint，备份经独立读连接执行，不再长持 `_LOCK` 数秒阻塞消息分发，群聊响应恢复毫秒级；
+  - **前台异常优雅降级**：`router` 拦截底层 DB 异常统一转为“系统繁忙，请稍后重试~”，群聊永不暴露原始数据库错误。
+
 ## v0.68.21
 - ⚡ **彻底根治 56 秒 Event Loop 阻塞（`Event loop lag detected: 56.067s`）与卡死**：
   - **解耦主事件循环与自动备份执行链路**：将原先潜伏在主消息分发路径（`_dispatch`）中的 `maybe_auto_backup()` 彻底剔除，改为在插件初始化阶段启动独立后台守护线程（`xb-auto-backup`）定期检测与执行，主事件循环分发消息耗时恢复至 0ms 纯内存处理；

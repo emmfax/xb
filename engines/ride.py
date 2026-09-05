@@ -104,7 +104,8 @@ def _ensure_welcome_init():
                 if not _WELCOME_INITIALIZED:
                     if ST._DB is not None:
                         try:
-                            rows = ST._DB.execute("SELECT DISTINCT gid FROM accounts WHERE data LIKE '%\"welcome\"%'").fetchall()
+                            with ST._LOCK:
+                                rows = ST._DB.execute("SELECT DISTINCT gid FROM accounts WHERE data LIKE '%\"welcome\"%'").fetchall()
                             for (g,) in rows:
                                 _WELCOME_GIDS.add(str(g))
                         except Exception:
@@ -114,7 +115,8 @@ def _ensure_welcome_init():
             if not _WELCOME_INITIALIZED:
                 if ST._DB is not None:
                     try:
-                        rows = ST._DB.execute("SELECT DISTINCT gid FROM accounts WHERE data LIKE '%\"welcome\"%'").fetchall()
+                        with ST._LOCK:
+                            rows = ST._DB.execute("SELECT DISTINCT gid FROM accounts WHERE data LIKE '%\"welcome\"%'").fetchall()
                         for (g,) in rows:
                             _WELCOME_GIDS.add(str(g))
                     except Exception:
@@ -139,7 +141,8 @@ def _welcome_remove(gid, qq):
         # 粗略：扫描同群是否还有其他 welcome，若无则移除
         if ST._DB is None:
             return
-        rows = ST._DB.execute("SELECT data FROM accounts WHERE gid=?", (int(gid),)).fetchall()
+        with ST._LOCK:
+            rows = ST._DB.execute("SELECT data FROM accounts WHERE gid=?", (int(gid),)).fetchall()
         has = False
         for (d,) in rows:
             try:

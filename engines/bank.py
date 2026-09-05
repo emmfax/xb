@@ -425,7 +425,7 @@ def cmd_transfer(gid, qq, target, amount):
                 new_dst = min(100000000000, dst_cur + int(amount))
                 ST._DB.execute("INSERT INTO wallet(gid, qq, money) VALUES(?,?,?) ON CONFLICT(gid, qq) DO UPDATE SET money=excluded.money", (int(gid), int(qq), new_src))
                 ST._DB.execute("INSERT INTO wallet(gid, qq, money) VALUES(?,?,?) ON CONFLICT(gid, qq) DO UPDATE SET money=excluded.money", (int(gid), int(target), new_dst))
-                ST._DB.commit()
+                ST._safe_commit()
                 a.dirty = False
         else:
             # 降级：原逻辑
@@ -488,7 +488,7 @@ def cmd_gamble(gid, qq, amount):
                 ST._DB.execute("INSERT INTO wallet(gid, qq, money) VALUES(?,?,?) ON CONFLICT(gid, qq) DO UPDATE SET money=excluded.money", (int(gid), int(qq), new_money))
                 ST._DB.execute("INSERT INTO accounts(gid, qq, data) VALUES(?,?,?) ON CONFLICT(gid, qq) DO UPDATE SET data=excluded.data", (int(gid), int(qq), __import__("json").dumps(a2.kv, ensure_ascii=False)))
                 a2.dirty = False
-                ST._DB.commit()
+                ST._safe_commit()
                 return f"赌博成功！你获得了{gain}{ST.coin_name()}，净赚{gain - amount}！"
             else:
                 # 失败：-amount 魅力 -meli
@@ -504,7 +504,7 @@ def cmd_gamble(gid, qq, amount):
                     a2.set("jail_start", __import__("datetime").datetime.now().strftime("%Y-%m-%d %H:%M:%S"))
                     a2.set("release_timestamp", str(int(__import__("time").time()) + int(jail_mins) * 60))
                     ST._DB.execute("INSERT INTO accounts(gid, qq, data) VALUES(?,?,?) ON CONFLICT(gid, qq) DO UPDATE SET data=excluded.data", (int(gid), int(qq), __import__("json").dumps(a2.kv, ensure_ascii=False)))
-                ST._DB.commit()
+                ST._safe_commit()
                 if jail:
                     return (f"赌博失败，损失{amount}{ST.coin_name()}，魅力-{meli}！\r\n"
                             f"赌博时被抓了！被关监狱{jail_mins}分钟！")
@@ -541,9 +541,11 @@ def cmd_rob_zone(gid, qq):
     try:
         ST._ensure_db()
         if ST._DB is not None:
-            wins = [q for q in (r[0] for r in ST._DB.execute(
-                "SELECT DISTINCT qq FROM wallet WHERE gid=?", (int(gid),)).fetchall())
-                if str(q) != str(qq)]
+            with ST._LOCK:
+                rows = ST._DB.execute(
+                    "SELECT DISTINCT qq FROM wallet WHERE gid=?", (int(gid),)).fetchall()
+            wins = [q for q in (r[0] for r in rows)
+                    if str(q) != str(qq)]
     except Exception:
         wins = []
     if not wins:
@@ -629,7 +631,7 @@ def cmd_redpack(gid, qq, amount, pwd=None):
             ST._DB.execute("DELETE FROM redpacks WHERE ts < ?", (int(time.time()) - 86400,))
             ST._DB.execute("INSERT INTO redpacks(gid, qq, pwd, amount, ts) VALUES(?,?,?,?,?)",
                            (int(gid), int(qq), pwd, amount, int(time.time())))
-            ST._DB.commit()
+            ST._safe_commit()
     except Exception:
         ST.coins_add(gid, qq, -amount)
         ST.acct_add(gid, qq, "stamina", -cost_tili)
@@ -641,7 +643,7 @@ def cmd_redpack(gid, qq, amount, pwd=None):
                 ST._DB.execute("DELETE FROM redpacks WHERE ts < ?", (int(time.time()) - 86400,))
                 ST._DB.execute("INSERT INTO redpacks(gid, qq, pwd, amount, ts) VALUES(?,?,?,?,?)",
                                (int(gid), int(qq), pwd, amount, int(time.time())))
-                ST._DB.commit()
+                ST._safe_commit()
         except Exception:
             pass
     return (f"发红包啦！发了{amount}{ST.coin_name()}点，大家快抢吧！\r\n"
@@ -701,12 +703,16 @@ def cmd_recv_red(gid, qq, pwd):
                 ST._DB.execute("DELETE FROM redpacks WHERE gid=? AND pwd=?", (int(gid), str(pwd)))
             else:
                 ST._DB.execute("UPDATE redpacks SET amount=? WHERE gid=? AND pwd=?", (remain, int(gid), str(pwd)))
-            ST._DB.commit()
+            ST._safe_commit()
             return f"恭喜！你抢到了 {got}{ST.coin_name()}，魅力+{gain_meili + base_meili}！（剩余{remain}）"
     except Exception:
         pass
-    # 降级非原子路径（兼容）
-    row = ST._DB.execute("SELECT qq, amount FROM redpacks WHERE gid=? AND pwd=?", (int(gid), str(pwd))).fetchone()
+    # 降级非原子路径（兼容，持锁读避免 database is locked）
+    try:
+        with ST._LOCK:
+            row = ST._DB.execute("SELECT qq, amount FROM redpacks WHERE gid=? AND pwd=?", (int(gid), str(pwd))).fetchone() if ST._DB is not None else None
+    except Exception:
+        row = None
     if not row:
         return "口令错误或红包不存在！"
     if int(row[0]) == int(qq):
@@ -904,7 +910,7 @@ def cmd_sell_slave(gid, qq, target):
                 if loot <= 0:
                     ST._DB.execute("INSERT INTO accounts(gid, qq, data) VALUES(?,?,?) ON CONFLICT(gid, qq) DO UPDATE SET data=excluded.data", (int(gid), int(qq), __import__("json").dumps(a2.kv, ensure_ascii=False)))
                     a2.dirty = False
-                    ST._DB.commit()
+                    ST._safe_commit()
                     return "对方是个穷光蛋，无法对他实施打劫！"
                 src_cur = cur_money
                 dst_cur = victim_money
@@ -912,7 +918,7 @@ def cmd_sell_slave(gid, qq, target):
                 ST._DB.execute("INSERT INTO wallet(gid, qq, money) VALUES(?,?,?) ON CONFLICT(gid, qq) DO UPDATE SET money=excluded.money", (int(gid), int(target), max(0, dst_cur - loot)))
                 ST._DB.execute("INSERT INTO accounts(gid, qq, data) VALUES(?,?,?) ON CONFLICT(gid, qq) DO UPDATE SET data=excluded.data", (int(gid), int(qq), __import__("json").dumps(a2.kv, ensure_ascii=False)))
                 a2.dirty = False
-                ST._DB.commit()
+                ST._safe_commit()
                 tn = _disp_name(target, gid)
                 return f"打劫成功！你从 {tn} 处劫走{loot}{ST.coin_name()}！"
             else:
@@ -927,7 +933,7 @@ def cmd_sell_slave(gid, qq, target):
                 ST._DB.execute("INSERT INTO wallet(gid, qq, money) VALUES(?,?,?) ON CONFLICT(gid, qq) DO UPDATE SET money=excluded.money", (int(gid), int(qq), new_money))
                 ST._DB.execute("INSERT INTO accounts(gid, qq, data) VALUES(?,?,?) ON CONFLICT(gid, qq) DO UPDATE SET data=excluded.data", (int(gid), int(qq), __import__("json").dumps(a2.kv, ensure_ascii=False)))
                 a2.dirty = False
-                ST._DB.commit()
+                ST._safe_commit()
                 return (f"打劫失败！实施打劫时被抓！被关监狱{jail_mins}分钟，\r\n"
                         f"罚款{fine}{ST.coin_name()}，魅力-{meli}！")
     except Exception:
@@ -1014,10 +1020,11 @@ def handle(gid, qq, raw):
     # 修复抢红包: 允许直接输入口令而无需前缀
     # 若当前无其他指令匹配，且存在红包且输入等于口令，则视为抢红包
     if text and not text.startswith(("存款", "取款", "强制取款", "转账", "赌博", "打劫", "发红包", "抢红包", "我要", "劫狱", "保释", "自我")):
-        # 纯口令尝试
+        # 纯口令尝试（持锁读，避免跨线程 database is locked）
         try:
             if ST._DB is not None:
-                row = ST._DB.execute("SELECT pwd FROM redpacks WHERE gid=? AND pwd=?", (int(gid), text.strip())).fetchone()
+                with ST._LOCK:
+                    row = ST._DB.execute("SELECT pwd FROM redpacks WHERE gid=? AND pwd=?", (int(gid), text.strip())).fetchone()
                 if row:
                     return cmd_recv_red(gid, qq, text.strip())
         except Exception:
@@ -1041,7 +1048,8 @@ def handle(gid, qq, raw):
             # 去除可能的 CQ 码后剩余纯口令
             cand = re.sub(r"\[CQ:[^\]]+\]", "", cand).strip()
             if cand and len(cand) <= 10:
-                row = ST._DB.execute("SELECT pwd FROM redpacks WHERE gid=? AND pwd=?", (int(gid), cand)).fetchone()
+                with ST._LOCK:
+                    row = ST._DB.execute("SELECT pwd FROM redpacks WHERE gid=? AND pwd=?", (int(gid), cand)).fetchone()
                 if row:
                     return cmd_recv_red(gid, qq, cand)
     except Exception:
