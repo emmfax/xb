@@ -268,12 +268,6 @@ def wake(sysname, default):
 def _ensure_db():
     global _DB, _DB_PATH
     if _DB is not None:
-        # 自愈防锁：若存在异常遗留未提交事务，自动回滚释放锁
-        try:
-            if getattr(_DB, "in_transaction", False):
-                _DB.rollback()
-        except Exception:
-            pass
         return _DB
     with _LOCK:
         if _DB is not None:
@@ -322,7 +316,12 @@ def coins_add(gid, qq, delta):
             return newv
         except Exception:
             _safe_rollback()
-            raise
+            try:
+                row = _DB.execute("SELECT money FROM wallet WHERE gid=? AND qq=?",
+                                  (int(gid), int(qq))).fetchone()
+                return int(row[0]) if row else 0
+            except Exception:
+                return 0
 
 def txn_coins_acct(gid, qq, delta_coins=0, acct_updates=None):
     """原子事务：钱包 delta + 账户 kv 批量更新，同持 _LOCK 一次提交"""
@@ -370,7 +369,7 @@ def txn_coins_acct(gid, qq, delta_coins=0, acct_updates=None):
             return newv
         except Exception:
             _safe_rollback()
-            raise
+            return 0
 
 def get_user_snapshot(gid, qq):
     """快照：一次性返回 {money, account_kv, group_kv} 供排行榜/管理台复用，避免 N+1"""
@@ -490,7 +489,6 @@ def acct_save(gid, qq):
             _safe_commit()
         except Exception:
             _safe_rollback()
-            raise
 
 # ==================== 5. 群档案层 ====================
 class _DirtyDict(dict):
@@ -735,7 +733,6 @@ def save_group(gid):
             _safe_commit()
         except Exception:
             _safe_rollback()
-            raise
 
 def user_clear(gid, qq):
     """彻底清除单用户在指定群的全部底层数据（钱包、账户、群组数据）"""
@@ -1011,7 +1008,6 @@ def flush_all():
             _safe_commit()
         except Exception:
             _safe_rollback()
-            raise
 
 def merge_from(db_path):
     if not os.path.isfile(db_path):
@@ -1192,6 +1188,16 @@ def backup_user_data(force=False):
             except Exception:
                 pass
         bck.close()
+        if dst and os.path.isfile(dst):
+            try:
+                from .core import webdav as _wd
+                _wd.async_upload_backup(dst)
+            except Exception:
+                try:
+                    from core import webdav as _wd
+                    _wd.async_upload_backup(dst)
+                except Exception:
+                    pass
         return dst
     except Exception:
         return None

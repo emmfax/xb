@@ -1563,6 +1563,31 @@
         "type": "int",
         "default": 3,
         "description": "自动备份间隔(小时)"
+      },
+      "WebDAV备份开关": {
+        "type": "string",
+        "default": "假",
+        "description": "WebDAV云端自动备份开关（真=本地备份后自动上传云端，假=关闭）"
+      },
+      "WebDAV服务器地址": {
+        "type": "string",
+        "default": "",
+        "description": "WebDAV服务器完整URL（例如坚果云: https://dav.jianguoyun.com/dav/ 或 Alist）"
+      },
+      "WebDAV用户名": {
+        "type": "string",
+        "default": "",
+        "description": "WebDAV登录账号或邮箱"
+      },
+      "WebDAV应用密码": {
+        "type": "string",
+        "default": "",
+        "description": "WebDAV应用密码/访问Token"
+      },
+      "WebDAV远端目录": {
+        "type": "string",
+        "default": "/xbbot_backup/",
+        "description": "WebDAV远端备份存放目录（例如 /xbbot_backup/）"
       }
     }
   },

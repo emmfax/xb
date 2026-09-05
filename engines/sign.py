@@ -38,17 +38,18 @@ def _today_sign_order(gid):
             if n == 1:
                 # 仅首签时触发一次清理，降低开销
                 cutoff = (dt.date.today() - dt.timedelta(days=7)).strftime("%Y%m%d")
-                rows = ST._DB.execute("SELECT k FROM kv WHERE k LIKE 'signorder_%'").fetchall() if ST._DB else []
-                for (kk,) in rows:
-                    try:
-                        # kk 形如 signorder_gid_YYYYMMDD
-                        dpart = kk.rsplit("_", 1)[-1]
-                        if dpart.isdigit() and len(dpart) == 8 and dpart < cutoff:
-                            ST._DB.execute("DELETE FROM kv WHERE k=?", (kk,))
-                    except Exception:
-                        continue
-                if rows:
-                    ST._DB.commit()
+                with ST._LOCK:
+                    if ST._DB is not None:
+                        rows = ST._DB.execute("SELECT k FROM kv WHERE k LIKE 'signorder_%'").fetchall()
+                        for (kk,) in rows:
+                            try:
+                                dpart = kk.rsplit("_", 1)[-1]
+                                if dpart.isdigit() and len(dpart) == 8 and dpart < cutoff:
+                                    ST._DB.execute("DELETE FROM kv WHERE k=?", (kk,))
+                            except Exception:
+                                continue
+                        if rows:
+                            ST._safe_commit()
         except Exception:
             pass
         return n

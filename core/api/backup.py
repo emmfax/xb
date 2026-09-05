@@ -313,3 +313,32 @@ async def handle_db_doctor(request, plugin_base=""):
         })
     except Exception as e:
         return _err(f"db doctor failed: {e}", 500)
+
+
+async def handle_webdav_test(request):
+    """测试 WebDAV 连接"""
+    try:
+        from .. import webdav as _wd
+    except ImportError:
+        try:
+            from core import webdav as _wd
+        except ImportError:
+            return _err("WebDAV 模块未加载", 500)
+    ok, msg = _wd.test_connection()
+    return json_response({"ok": ok, "msg": msg})
+
+
+async def handle_webdav_backup_now(request):
+    """立即备份并上传至 WebDAV"""
+    try:
+        dst = ST.backup_user_data(force=True)
+        if not dst or not os.path.isfile(dst):
+            return _err("本地备份生成失败", 500)
+        try:
+            from .. import webdav as _wd
+        except ImportError:
+            from core import webdav as _wd
+        ok, msg = _wd.upload_backup(dst)
+        return json_response({"ok": ok, "msg": msg, "file": os.path.basename(dst)})
+    except Exception as e:
+        return _err(f"WebDAV 备份异常: {e}", 500)

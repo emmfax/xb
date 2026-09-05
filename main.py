@@ -108,7 +108,7 @@ def _raw_file_response(data_bytes, filename):
 PLUGIN_ID = "astrbot_plugin_xbbot"
 PLUGIN_DESC = "小白(奴/签/银/娱/私/灵/骑/超管/帮派/冒险+主菜单+WebUI), 现代SQLite存储"
 PLUGIN_AUTHOR = "Light"
-PLUGIN_VERSION = "0.68.19"
+PLUGIN_VERSION = "0.68.20"
 PLUGIN_REPO = "https://github.com/emmfax/xb"
 
 # 复用 router 的主菜单，保持单源
@@ -750,6 +750,20 @@ class XbBot(Star):
             return await handle_db_doctor(request, os.path.dirname(os.path.abspath(__file__)))
         except Exception as e:
             return _err(f"db doctor failed: {e}", 500)
+
+    async def page_webdav_test(self, request=None, *args, **kwargs):
+        try:
+            from .core.api.backup import handle_webdav_test
+            return await handle_webdav_test(request)
+        except Exception as e:
+            return _err(f"webdav test failed: {e}", 500)
+
+    async def page_webdav_backup_now(self, request=None, *args, **kwargs):
+        try:
+            from .core.api.backup import handle_webdav_backup_now
+            return await handle_webdav_backup_now(request)
+        except Exception as e:
+            return _err(f"webdav backup failed: {e}", 500)
 
     async def page_version_check(self, request=None):
         try:

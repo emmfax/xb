@@ -357,7 +357,19 @@ def cmd_backup_xb():
                 rel = dst.replace(base, "").lstrip("/\\") if base else dst
             except Exception:
                 rel = dst
-            return f"备份成功：{rel}（已写入 backups）"
+            extra = ""
+            try:
+                from ..core import webdav as _wd
+                if _wd.is_enabled():
+                    extra = "，WebDAV 云备份任务已触发"
+            except Exception:
+                try:
+                    from core import webdav as _wd
+                    if _wd.is_enabled():
+                        extra = "，WebDAV 云备份任务已触发"
+                except Exception:
+                    pass
+            return f"备份成功：{rel}（已写入 backups{extra}）"
         return "备份失败（无数据或目录不可写）"
     except Exception as e:
         return f"备份异常：{e}"
@@ -410,13 +422,13 @@ def _version():
                 except Exception:
                     pass
         if not ver:
-            ver = "0.68.19"
+            ver = "0.68.20"
         return f"小白版本：{ver}"
     except Exception:
-        return "小白版本：0.68.19"
+        return "小白版本：0.68.20"
 
 # ---- 统一入口（测试指令仅超管，WebUI可配但不显示于MENU，已删 个人信息） ----
-_ADMIN_CMDS = ("群列表", "应用统计", "扣钱", "充钱", "清空", "重置", "禁言", "踢人", "备份xb", "备份", "开启维护", "关闭维护", "维护信息", "测试testxb", "测试testxb1", "测试testxb2", "测试testxb3", "测试testxb4", "测试testxb5", "测试testxb6", "测试testxb7", "测试testxb8", "超管列表")
+_ADMIN_CMDS = ("群列表", "应用统计", "扣钱", "充钱", "清空", "重置", "禁言", "踢人", "备份xb", "备份", "测试webdav", "webdav测试", "开启维护", "关闭维护", "维护信息", "测试testxb", "测试testxb1", "测试testxb2", "测试testxb3", "测试testxb4", "测试testxb5", "测试testxb6", "测试testxb7", "测试testxb8", "超管列表")
 
 
 def handle(gid, qq, raw, is_admin=False):
@@ -484,6 +496,18 @@ def handle(gid, qq, raw, is_admin=False):
         return cmd_backup_xb()
     if text.startswith("备份xb"):
         return cmd_backup_xb()
+    if text in ("测试webdav", "webdav测试"):
+        try:
+            from ..core import webdav as _wd
+            ok, msg = _wd.test_connection()
+            return f"【WebDAV测试】{'✅ 成功' if ok else '❌ 失败'}\r\n{msg}"
+        except Exception:
+            try:
+                from core import webdav as _wd
+                ok, msg = _wd.test_connection()
+                return f"【WebDAV测试】{'✅ 成功' if ok else '❌ 失败'}\r\n{msg}"
+            except Exception as e:
+                return f"【WebDAV测试】❌ 模块调用异常: {e}"
     if text in ("开启维护", "打开维护"):
         return _maint_on()
     if text in ("关闭维护", "关闭维护模式"):

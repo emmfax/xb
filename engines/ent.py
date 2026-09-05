@@ -418,9 +418,8 @@ def _check_single_game(gid, new_label, sender_qq=None):
                     last_time = int(ST.recall_get(f"chain_last_time_{gid}", "0") or 0)
                 except Exception:
                     last_time = 0
-            owner = ST.recall_get(f"{kind}_owner_{gid}", "")
-            now = int(time.time())
-            if (sender_qq and str(owner) == str(sender_qq)) or (now - max(start_ts, last_time)) > 30:
+            # 开局者重开、或者超过30秒无互动、或者无有效owner残留，均直接瞬时刷新重开
+            if not owner or (sender_qq and str(owner) == str(sender_qq)) or (now - max(start_ts, last_time)) > 30:
                 _clean_expired_game(gid, max_seconds=0)
                 return None
         return f"已有进行中的【{cur}】游戏，请先完成或退出后再开新局！（发送【退出{cur}】可重新开局）"
@@ -681,12 +680,12 @@ def handle(gid, qq, raw):
         if not last_word:
             return "当前群没有进行中的接龙游戏，发送【开始接龙】开启一局吧~"
         return f"当前接龙词语为【{last_word}】，请用尾字「{last_word[-1]}」接龙（词语2-6字）~"
-    if text in ("结束接龙", "退出接龙"):
+    if text in ("结束接龙", "重置接龙", "退出接龙"):
         owner = ST.recall_get(f"chain_owner_{gid}")
         if not owner:
             _clear_active_game(gid)
             return "当前没有进行中的接龙游戏！"
-        if str(owner) == str(qq):
+        if text in ("结束接龙", "重置接龙") or str(owner) == str(qq):
             ST.recall_set(f"chain_owner_{gid}", "")
             ST.recall_set(f"chain_{gid}", "")
             ST.recall_set(f"chain_start_{gid}", "")
@@ -695,7 +694,7 @@ def handle(gid, qq, raw):
             ST.recall_set(f"chain_last_qq_{gid}", "")
             ST.recall_set(f"chain_last_time_{gid}", "")
             _clear_active_game(gid)
-            return "开局者退出了接龙，接龙结束！"
+            return "接龙已结束并清理！随时发送【开始接龙】开启新局~"
         else:
             players = _get_players(gid, "chain_players_")
             if str(qq) in players:
