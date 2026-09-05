@@ -62,7 +62,8 @@ def apply_reply_override(raw, reply, store):
 
 _GUARD_CACHE = {}
 _GUARD_CACHE_TTL = 5.0  # 5s 缓存，千群每消息 18次kv/config读→命中后0次DB；由 _bump_config_ver 主动清空
-_GUARD_BATCH_TTL = 0.3  # 同 gid 同 tick 批量复用：0.3s 内9引擎守卫共享一次计算
+_GUARD_CACHE_MAX = 5000  # 无界增长防护：千群×9系统键超限淘汰最旧一半
+_GUARD_BATCH_TTL = 2.0  # 同 gid 批量复用：2s 内9引擎守卫共享一次计算，突发消息0重复计算
 import time as _t_guard
 
 def _sys_off(gid, engine, store):
@@ -80,6 +81,14 @@ def _sys_off(gid, engine, store):
         val = store.recall_get("swf_%s_%s" % (gid, sysname), "1") == "0"
         try:
             _GUARD_CACHE[key] = (_t_guard.time(), val)
+            if len(_GUARD_CACHE) > _GUARD_CACHE_MAX:
+                # 淘汰最旧一半，防千群常驻内存无限涨
+                try:
+                    _old = sorted(_GUARD_CACHE.items(), key=lambda x: x[1][0])[:_GUARD_CACHE_MAX // 2]
+                    for _k, _v in _old:
+                        _GUARD_CACHE.pop(_k, None)
+                except Exception:
+                    pass
         except Exception:
             pass
         return val

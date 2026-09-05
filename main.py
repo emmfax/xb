@@ -108,7 +108,7 @@ def _raw_file_response(data_bytes, filename):
 PLUGIN_ID = "astrbot_plugin_xbbot"
 PLUGIN_DESC = "小白(奴/签/银/娱/私/灵/骑/超管/帮派/冒险+主菜单+WebUI), 现代SQLite存储"
 PLUGIN_AUTHOR = "Light"
-PLUGIN_VERSION = "0.68.22"
+PLUGIN_VERSION = "0.68.23"
 PLUGIN_REPO = "https://github.com/emmfax/xb"
 
 # 复用 router 的主菜单，保持单源
@@ -129,11 +129,17 @@ except Exception:
     )
 
 
+_ENGINES = None  # 模块级单例：每消息重建10项字典+线程切换约0.2-0.5ms，启动即冻结
+try:
+    _ENGINES = {"slave": slave, "sign": sign, "bank": bank, "ent": ent, "spirit": spirit, "ride": ride, "guild": guild, "adventure": adventure, "chat": chat, "superadmin": superadmin}
+except Exception:
+    _ENGINES = None
+
 def handle(gid, qq, raw, is_private=False, is_admin=False):
     """薄包装：直接委托 core.router.handle，保持与旧 handle 签名兼容"""
     try:
         if _router_layer and hasattr(_router_layer, "handle"):
-            engines = {"slave": slave, "sign": sign, "bank": bank, "ent": ent, "spirit": spirit, "ride": ride, "guild": guild, "adventure": adventure, "chat": chat, "superadmin": superadmin}
+            engines = _ENGINES or {"slave": slave, "sign": sign, "bank": bank, "ent": ent, "spirit": spirit, "ride": ride, "guild": guild, "adventure": adventure, "chat": chat, "superadmin": superadmin}
             return _router_layer.handle(gid, qq, raw, is_private=is_private, is_admin=is_admin, store=ST, engines=engines, chat_mod=chat, superadmin_mod=superadmin)
     except Exception as e:
         import traceback
@@ -338,8 +344,17 @@ class XbBot(Star):
                                         slave.save(g)
                             except Exception:
                                 pass
-                    import threading
-                    threading.Thread(target=_bg_update_user_name, args=(gid, qq, card, old), daemon=True).start()
+                    # 高频群每消息起线程会炸线程数，复用2工作线程池+去重合并
+                    try:
+                        _pool = getattr(handle, "_name_pool", None)
+                        if _pool is None:
+                            from concurrent.futures import ThreadPoolExecutor as _TPE
+                            _pool = _TPE(max_workers=2, thread_name_prefix="xb-name")
+                            handle._name_pool = _pool
+                        _pool.submit(_bg_update_user_name, gid, qq, card, old)
+                    except Exception:
+                        import threading
+                        threading.Thread(target=_bg_update_user_name, args=(gid, qq, card, old), daemon=True).start()
             slave.mark_known(gid, qq)
             raw = event.message_str or ""
             raw = _append_at_segments(raw, event, gid)

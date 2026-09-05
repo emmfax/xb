@@ -52,7 +52,22 @@ def handle(qq, raw):
         if k in text:
             return random.choice(replies)
     if ST.cfg("私聊配置", "私聊开关", "真") == "真":
-        # 轻量随意回复(限频防刷)
-        if random.random() < float(ST.cfg("私聊配置", "回复概率", "0.3") or 0.3):
+        # 轻量随意回复(5秒限频防刷 + 概率缓存，防私聊高频刷屏)
+        try:
+            _now = __import__("time").time()
+            _last = float(ST.recall_get(f"chat_ts_{qq}", "0") or 0)
+            if _now - _last < 5:
+                return None
+        except Exception:
+            _now = 0
+        try:
+            _prob = float(ST.cfg("私聊配置", "回复概率", "0.3") or 0.3)
+        except Exception:
+            _prob = 0.3
+        if random.random() < _prob:
+            try:
+                ST.recall_set(f"chat_ts_{qq}", str(_now))
+            except Exception:
+                pass
             return random.choice(DEMO_REPLIES)
     return None

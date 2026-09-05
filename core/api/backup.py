@@ -32,10 +32,7 @@ def _safe_backup(rel, base=""):
 
 
 async def handle_backups_list(request, plugin_base=""):
-    try:
-        ST.maybe_auto_backup()
-    except Exception:
-        pass
+    # 备份列表不再触发自动备份检查（自动备份只由 xb-auto-backup 守护线程执行，防WebUI每次点开雪崩）
     rel = get_req_query(request, "dir", "") or get_req_query(request, "path", "")
     root = _safe_backup(rel, _backup_base(plugin_base))
     if not root:

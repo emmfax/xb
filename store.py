@@ -429,15 +429,20 @@ def acct(gid, qq):
                 return a
         kv = {}
         _ensure_db()
+        row = None
         if _DB is not None:
-            # DB 读仍用 _DB_LOCK 避免与写冲突（千群并发读 WAL 可并行，写串行）
-            row = _DB.execute("SELECT data FROM accounts WHERE gid=? AND qq=?",
-                              (int(gid), int(qq))).fetchone()
-            if row:
-                try:
-                    kv = json.loads(row[0])
-                except Exception:
-                    kv = {}
+            # 持锁只做fetch，json解析快照后执行，缩短持锁窗口
+            try:
+                row = _DB.execute("SELECT data FROM accounts WHERE gid=? AND qq=?",
+                                  (int(gid), int(qq))).fetchone()
+                row = (row[0],) if row else None
+            except Exception:
+                row = None
+        if row:
+            try:
+                kv = json.loads(row[0])
+            except Exception:
+                kv = {}
         a = Acct(gid, qq, kv)
         _ACC_CACHE[key] = a
         # LRU 淘汰：超限则踢最旧
@@ -605,29 +610,44 @@ def group(gid):
             g = _GROUP_CACHE.get(gid)
             if g is not None:
                 return g
-        users = {}
         _ensure_db()
+        rows = []
         if _DB is not None:
-            rows = _DB.execute(
-                "SELECT qq, data FROM groups WHERE gid=?", (int(gid),)).fetchall()
-            for qq, data in rows:
-                try:
-                    d = json.loads(data)
-                    if isinstance(d, dict) and d:
-                        # 快判：逐key早停，避免 "".join 1k分配
-                        need_tr = False
-                        for kk in d.keys():
-                            for ch in kk:
-                                if '\u4e00' <= ch <= '\u9fff':
-                                    need_tr = True
-                                    break
-                            if need_tr:
-                                break
-                        if need_tr:
-                            d = translate_dict(d)
-                    users[str(qq)] = d
-                except Exception:
-                    users[str(qq)] = {}
+            # 持锁只做fetchall快照，逐行json/翻译在锁外（千人群5-30ms不再阻塞全插件）
+            try:
+                rows = _DB.execute(
+                    "SELECT qq, data FROM groups WHERE gid=?", (int(gid),)).fetchall()
+                rows = list(rows)
+            except Exception:
+                rows = []
+    # 锁外解析：CPU密集的json/翻译不占用全局写锁
+    users = {}
+    for qq, data in rows:
+        try:
+            d = json.loads(data)
+            if isinstance(d, dict) and d:
+                # 快判：逐key早停，避免 "".join 1k分配
+                need_tr = False
+                for kk in d.keys():
+                    for ch in kk:
+                        if '\u4e00' <= ch <= '\u9fff':
+                            need_tr = True
+                            break
+                    if need_tr:
+                        break
+                if need_tr:
+                    d = translate_dict(d)
+            users[str(qq)] = d
+        except Exception:
+            users[str(qq)] = {}
+    with _LOCK:
+        # 双检：解析期间可能已有他线程回填，直接复用
+        try:
+            g = _GROUP_CACHE.get(gid)
+            if g is not None:
+                return g
+        except Exception:
+            pass
         g = Group(gid, users)
         _GROUP_CACHE[gid] = g
         try:

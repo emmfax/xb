@@ -418,11 +418,15 @@ def cmd_transfer(gid, qq, target, amount):
                 a = ST.acct(gid, qq)
                 a.set("stamina", str(cur_st - cs))
                 ST._DB.execute("INSERT INTO accounts(gid, qq, data) VALUES(?,?,?) ON CONFLICT(gid, qq) DO UPDATE SET data=excluded.data", (int(gid), int(qq), __import__("json").dumps(a.kv, ensure_ascii=False)))
-                # 钱包转账（复用 txn_two_wallets 逻辑但已在锁内，直接执行）
+                # 钱包转账（P1: 接收方达上限截断时差额不得销毁，按实际credit扣减）
                 row2 = ST._DB.execute("SELECT money FROM wallet WHERE gid=? AND qq=?", (int(gid), int(target))).fetchone()
                 dst_cur = int(row2[0]) if row2 else 0
-                new_src = cur_money - int(amount)
-                new_dst = min(100000000000, dst_cur + int(amount))
+                credit = min(int(amount), max(0, 100000000000 - dst_cur))
+                if credit <= 0:
+                    ST._safe_rollback()
+                    return "对方钱包已满，无法接收转账！"
+                new_src = cur_money - credit
+                new_dst = dst_cur + credit
                 ST._DB.execute("INSERT INTO wallet(gid, qq, money) VALUES(?,?,?) ON CONFLICT(gid, qq) DO UPDATE SET money=excluded.money", (int(gid), int(qq), new_src))
                 ST._DB.execute("INSERT INTO wallet(gid, qq, money) VALUES(?,?,?) ON CONFLICT(gid, qq) DO UPDATE SET money=excluded.money", (int(gid), int(target), new_dst))
                 ST._safe_commit()
@@ -572,8 +576,16 @@ def cmd_rob_zone(gid, qq):
         # 若仍想模拟穷，返回银行特有文案而非“对方是个穷光蛋”
         if loot <= 0:
             return "银行金库暂时空虚，打劫失败，下次再来！"
-    ST.coins_add(gid, victim, -loot)
-    ST.coins_add(gid, qq, loot)
+    # P1: 双人同时打劫同一victim时TOCTOU双花，同事务原子划转
+    try:
+        if hasattr(ST, "txn_two_wallets") and ST.txn_two_wallets(gid, victim, qq, loot):
+            pass
+        else:
+            ST.coins_add(gid, victim, -loot)
+            ST.coins_add(gid, qq, loot)
+    except Exception:
+        ST.coins_add(gid, victim, -loot)
+        ST.coins_add(gid, qq, loot)
     a.set("rob_bank_time", _now_s())
     ST.acct_save(gid, qq)
     return f"打劫银行成功！获得{loot}{ST.coin_name()}！"
@@ -727,6 +739,9 @@ def cmd_recv_red(gid, qq, pwd):
         return f"体力不足，抢红包需要{cost_tili}体力！"
     ST.acct_add(gid, qq, "stamina", -cost_tili)
     total = int(row[1])
+    # P0: 降级路径缺空包检查会凭空印钱
+    if total <= 0:
+        return "红包已被抢空！"
     got = random.randint(max(1, total // 20), max(1, total // 3))
     ST.coins_add(gid, qq, got)
     ST.acct_add(gid, qq, "charm", gain_meili + base_meili)
@@ -1020,13 +1035,15 @@ def handle(gid, qq, raw):
     # 修复抢红包: 允许直接输入口令而无需前缀
     # 若当前无其他指令匹配，且存在红包且输入等于口令，则视为抢红包
     if text and not text.startswith(("存款", "取款", "强制取款", "转账", "赌博", "打劫", "发红包", "抢红包", "我要", "劫狱", "保释", "自我")):
-        # 纯口令尝试（持锁读，避免跨线程 database is locked）
+        # 纯口令尝试（持锁读；P1: 纯数字1-2位让路冒险/猜数作答）
         try:
-            if ST._DB is not None:
-                with ST._LOCK:
-                    row = ST._DB.execute("SELECT pwd FROM redpacks WHERE gid=? AND pwd=?", (int(gid), text.strip())).fetchone()
-                if row:
-                    return cmd_recv_red(gid, qq, text.strip())
+            _txt = text.strip()
+            if not (_txt.isdigit() and len(_txt) <= 2):
+                if ST._DB is not None:
+                    with ST._LOCK:
+                        row = ST._DB.execute("SELECT pwd FROM redpacks WHERE gid=? AND pwd=?", (int(gid), _txt)).fetchone()
+                    if row:
+                        return cmd_recv_red(gid, qq, _txt)
         except Exception:
             pass
     if text in ("我要进监狱", "进监狱"):
@@ -1047,7 +1064,7 @@ def handle(gid, qq, raw):
             cand = (raw or "").strip()
             # 去除可能的 CQ 码后剩余纯口令
             cand = re.sub(r"\[CQ:[^\]]+\]", "", cand).strip()
-            if cand and len(cand) <= 10:
+            if cand and len(cand) <= 10 and not (cand.isdigit() and len(cand) <= 2):
                 with ST._LOCK:
                     row = ST._DB.execute("SELECT pwd FROM redpacks WHERE gid=? AND pwd=?", (int(gid), cand)).fetchone()
                 if row:

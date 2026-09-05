@@ -877,7 +877,7 @@ def _join_game(gid, qq, kind, label):
         return "您是开局者，无需加入！"
     start = ST.recall_get(f"{kind}_start_{gid}", "0")
     try:
-        if int(time.time()) - int(start) > 30:
+        if int(time.time()) - int(start) >= 30:
             return "开局已超过30秒，无法加入，请等待下一局！"
     except Exception:
         pass

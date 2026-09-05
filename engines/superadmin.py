@@ -300,11 +300,16 @@ def cmd_clear(gid, qq, arg):
             _clear_money(gid, t)
         # 2. 清空奴隶与释放名下奴隶
         try:
-            from engines import slave as _sl
+            from . import slave as _sl
             if hasattr(_sl, "clear_user_slave"):
                 _sl.clear_user_slave(gid, t)
         except Exception:
-            pass
+            try:
+                import slave as _sl2
+                if hasattr(_sl2, "clear_user_slave"):
+                    _sl2.clear_user_slave(gid, t)
+            except Exception:
+                pass
         ST.flush_all()
         return f"已彻底清空 <{_name(t)}> 的所有数据（包含奴隶、精灵与礼包状态，可重新领取新手礼包）。"
     return "未知操作。"
@@ -431,10 +436,10 @@ def _version():
                 except Exception:
                     pass
         if not ver:
-            ver = "0.68.22"
+            ver = "0.68.23"
         return f"小白版本：{ver}"
     except Exception:
-        return "小白版本：0.68.22"
+        return "小白版本：0.68.23"
 
 # ---- 统一入口（测试指令仅超管，WebUI可配但不显示于MENU，已删 个人信息） ----
 _ADMIN_CMDS = ("群列表", "应用统计", "扣钱", "充钱", "清空", "重置", "禁言", "踢人", "备份xb", "备份", "测试webdav", "webdav测试", "开启维护", "关闭维护", "维护信息", "测试testxb", "测试testxb1", "测试testxb2", "测试testxb3", "测试testxb4", "测试testxb5", "测试testxb6", "测试testxb7", "测试testxb8", "超管列表")

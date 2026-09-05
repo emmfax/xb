@@ -40,11 +40,20 @@ def _now():
     return int(time.time())
 
 
+_ADV_TTL = 30 * 60  # P1: 30分钟无操作自动过期，避免数字1/2/3被永久吞掉
+
 def _cur(gid, qq):
     a = _acct(gid, qq)
     try:
         import json as _j
-        return _j.loads(a.get("adventure", "{}") or "{}")
+        adv = _j.loads(a.get("adventure", "{}") or "{}")
+        if adv.get("map") and adv.get("ts"):
+            try:
+                if _now() - int(adv.get("ts") or 0) > _ADV_TTL:
+                    return {}
+            except Exception:
+                pass
+        return adv
     except Exception:
         return {}
 
@@ -144,12 +153,13 @@ def cmd_choose(gid, qq, n):
     if not adv.get("map"):
         return "对不起，您尚未开始冒险，请发送【冒险 地图】开始！"
     m = adv["map"]
+    # P1: 非法输入不再随机推进误导，直接提示格式
     try:
-        choice = int(str(n or "").strip() or random.randint(1, 3))
+        choice = int(str(n or "").strip())
     except Exception:
-        choice = random.randint(1, 3)
+        return "请输入数字 1 / 2 / 3 继续冒险！"
     if choice not in (1, 2, 3):
-        choice = random.randint(1, 3)
+        return "请输入数字 1 / 2 / 3 继续冒险！"
     max_round = max(5, _cfgi("最大轮数", 10))
     adv["round"] = int(adv.get("round", 1)) + 1
     adv["last_choice"] = choice

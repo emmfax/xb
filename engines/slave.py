@@ -1566,11 +1566,17 @@ def cmd_rank(gid, st):
     return cmd_rank_price(gid, st) + "\r\n\r\n" + cmd_rank_sign(gid, st)
 
 
-# 指令路由入口
+# 指令路由入口（脏数据如 price=abc 时 ValueError 永不透传群聊，优雅降级）
 def handle(gid, qq, raw):
-    reply = _route(gid, qq, raw)
+    try:
+        reply = _route(gid, qq, raw)
+    except Exception:
+        return "奴隶系统繁忙，请稍后重试~"
     if isinstance(reply, str) and reply:
-        save(str(gid))
+        try:
+            save(str(gid))
+        except Exception:
+            pass
         return reply
     return None
 

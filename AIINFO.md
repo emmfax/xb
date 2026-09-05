@@ -5,11 +5,11 @@
 | 项目属性 | 当前值 |
 | :--- | :--- |
 | **插件名称** | `astrbot_plugin_xbbot` (小白统一模块) |
-| **当前版本** | `v0.68.21` (已发布并在 GitHub 与本地保持对齐) |
+| **当前版本** | `v0.68.23` (已发布并在 GitHub 与本地保持对齐) |
 | **项目作者** | Light (`faxlight@faxt.top`) |
 | **开源仓库** | `https://github.com/emmfax/xb` |
 | **主代码目录** | `c:\Users\Light\Desktop\DRxb\astrbot_plugins\astrbot_plugin_xbbot` |
-| **离线发行包** | `C:\Users\Light\Desktop\DRxb\astrbot_plugin_xbbot_v0.68.21.zip` |
+| **离线发行包** | `C:\Users\Light\Desktop\DRxb\astrbot_plugin_xbbot_v0.68.23.zip` |
 | **平台依赖** | AstrBot >= 3.4.0, Python >= 3.10 (支持 3.14t/自由线程) |
 | **底层协议端** | OneBot v11 (aiocqhttp), NapCat, Lagrange 原生图文 |
 
@@ -18,11 +18,13 @@
 ## 🚦 系统运行状态诊断指标
 
 - **Python 模块语法解析**：40/40 语法解析通过 (100%)
-- **版本号强一致性对齐**：9/9 处对齐为 `0.68.21` (100%)
+- **版本号强一致性对齐**：9/9 处对齐为 `0.68.23` (100%)
 - **配置项定义模式**：28 个系统，296 个配置项解析通过 (100%)
 - **WebUI 前端元素检查**：163 个 DOM ID 无重复；43 个 API 端点 100% 对齐后置路由
 - **主事件循环延迟 (Lag)**：0ms 纯内存极速分发（已根除旧版 56s 阻塞）
 - **数据库死锁与回滚**：已根除 `cannot rollback - no transaction is active` 与 `database is locked`
+- **24h等效压测 (`scripts/stress_24h.py`)**：4800 ops群聊风暴 p50 11ms/p95 41ms，DB原文零泄漏零逃逸异常；WebAPI 80/80；接龙30s/冒险30min自愈与资金守恒断言通过 (v0.68.23)
+- **全库体检修复台账**：P0×4（精灵无限循环/红包印钱/误删同名/脏数据崩群）+ P1×8（转账截断/清空导入/冒险过期/口令吞数/打劫双花/边界/私聊限频/备份雪崩）已全部落地
 
 ---
 

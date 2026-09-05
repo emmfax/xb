@@ -131,7 +131,12 @@ def _desc(it):
 
 
 def _exp_need(it):
-    return int(it.get("level", 1)) * _cfgi("升级经验", 1000)
+    # P0: 配置误设为0时 while exp>=0 恒真无限循环卡死，钳位>=1
+    try:
+        need = int(it.get("level", 1)) * int(_cfgi("升级经验", 1000))
+    except Exception:
+        need = 1000
+    return need if need >= 1 else 1
 
 
 def _mk_spr(name, level=1):
@@ -469,7 +474,13 @@ def cmd_discard(gid, qq, name):
         sp["active"] = ""
     if sp.get("ride") == name:
         sp["ride"] = ""
-    sp["list"] = [x for x in sp.get("list", []) if x.get("name") != name]
+    # P0: 同名多只时仅删首只，误删全部是资损
+    _lst = list(sp.get("list", []))
+    for _i, _x in enumerate(_lst):
+        if _x.get("name") == name:
+            del _lst[_i]
+            break
+    sp["list"] = _lst
     red = _cfgi("魅力减少", 100)
     ST.acct_add(gid, qq, "charm", -red)
     _save(gid, qq, sp)
