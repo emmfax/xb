@@ -199,6 +199,15 @@ async def handle_clear_all(request, plugin_base=""):
                 ST._DB.commit()
                 ST._ACC_CACHE.clear()
                 ST._GROUP_CACHE.clear()
+                # kv 内存缓存必须同步清空，否则开关/游戏锁/签到顺序等残留内存快照，清空后仍幽灵生效
+                try:
+                    if hasattr(ST, "_KV_CACHE_LOCK"):
+                        with ST._KV_CACHE_LOCK:
+                            ST._KV_CACHE.clear()
+                    else:
+                        ST._KV_CACHE.clear()
+                except Exception:
+                    pass
                 try:
                     ST._DB.execute("DELETE FROM kv WHERE k='last_backup_ts'")
                     ST._DB.commit()

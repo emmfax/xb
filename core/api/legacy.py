@@ -115,7 +115,7 @@ def _handle_ini_content(content, rel_path=""):
         if m:
             all_nums = re.findall(r"\d{5,12}", rel_path or "")
             gid = all_nums[-2] if len(all_nums) >= 2 else m.group(1)
-    # 群共享 ini（digit Secs 为 QQ 列表）：如 753700701.ini / 123.ini / nuli_slave/*.ini
+    # 群共享 ini（digit Secs 为 QQ 列表）：如 <gid>.ini / nuli_slave/*.ini
     if digit_secs:
         if not gid:
             gid = "1000"
@@ -188,7 +188,7 @@ def _handle_ini_content(content, rel_path=""):
             except Exception:
                 pass
         return imported
-    # 单用户 ini（文件名=QQ，父目录=gid）：如 精灵系统/游戏账户/753700701/1058362385.ini
+    # 单用户 ini（文件名=QQ，父目录=gid）：如 精灵系统/游戏账户/<gid>/<qq>.ini
     # 若 rel_path 仅为文件名导致 gid==qq 或 gid 缺失，则尝试从 DB 推断真实 gid
     if qq_from_file and qq_from_file.isdigit() and (not gid or gid == qq_from_file):
         # 文件名为 QQ 且父目录丢失（单文件上传），尝试用库中最大群推断
@@ -200,7 +200,7 @@ def _handle_ini_content(content, rel_path=""):
                 for (cg,) in ST._DB.execute("SELECT DISTINCT gid FROM groups").fetchall():
                     if str(cg) not in cand_gids:
                         cand_gids.append(str(cg))
-            # 优先 753700701 这类已有 148 成员的群
+            # 优先成员最多的群
             if cand_gids:
                 # 选成员最多的
                 best = None; best_cnt = -1
@@ -227,9 +227,9 @@ def _handle_ini_content(content, rel_path=""):
                     pass
         except Exception:
             pass
-        # 仍无法推断则回退用 753700701 的父目录推断失败，保持原 qq 作为 gid 会导致显示异常，改用 753700701 若存在
+        # 仍无法推断则回退中性 gid（用 qq 作 gid 会导致显示异常；与上游 1000 约定一致）
         if gid == qq_from_file:
-            gid = "753700701"
+            gid = "1000"
     if qq_from_file and gid and qq_from_file.isdigit():
         qq = qq_from_file
         try:
