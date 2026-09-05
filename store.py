@@ -124,40 +124,34 @@ except Exception:
     _GROUP_CACHE = {}
 _ACC_CACHE_MAX = 50000  # 千群千人 1M 账户时，仅热缓存 5 万，常冷数据走 DB，控内存 500MB→~25MB
 _GROUP_CACHE_MAX = 5000  # Group LRU：1000群×1000人 1M DirtyDict 常驻会 OOM，限 5000 群
-# 批量提交：单群大组每指令3次commit 0.16ms×3=0.48ms，百群同理；合并为20次/0.1s一次可降 80%
-_COMMIT_PENDING = 0
-_COMMIT_LOCK = threading.Lock()
-_LAST_COMMIT = 0.0
-def _maybe_commit(force=False):
-    global _COMMIT_PENDING, _LAST_COMMIT
-    if _DB is None:
-        return
-    with _COMMIT_LOCK:
-        _COMMIT_PENDING += 1
-        now = time.time()
-        if force or _COMMIT_PENDING >= 20 or (now - _LAST_COMMIT) > 0.1:
-            try:
-                _DB.commit()
-                _LAST_COMMIT = now
-                _COMMIT_PENDING = 0
-            except Exception:
-                pass
-def _force_commit():
-    global _COMMIT_PENDING, _LAST_COMMIT
-    if _DB is None:
-        return
-    with _COMMIT_LOCK:
+
+def _safe_commit():
+    if _DB is not None:
         try:
             _DB.commit()
-            _LAST_COMMIT = time.time()
-            _COMMIT_PENDING = 0
+        except Exception:
+            try:
+                _DB.rollback()
+            except Exception:
+                pass
+
+def _safe_rollback():
+    if _DB is not None:
+        try:
+            _DB.rollback()
         except Exception:
             pass
+
+def _maybe_commit(force=False):
+    _safe_commit()
+
+def _force_commit():
+    _safe_commit()
 
 _SQL_INIT = """
 PRAGMA journal_mode=WAL;
 PRAGMA synchronous=NORMAL;
-PRAGMA busy_timeout=5000;
+PRAGMA busy_timeout=30000;
 PRAGMA cache_size=-64000;
 PRAGMA temp_store=MEMORY;
 PRAGMA journal_size_limit=67108864;
@@ -274,6 +268,12 @@ def wake(sysname, default):
 def _ensure_db():
     global _DB, _DB_PATH
     if _DB is not None:
+        # 自愈防锁：若存在异常遗留未提交事务，自动回滚释放锁
+        try:
+            if getattr(_DB, "in_transaction", False):
+                _DB.rollback()
+        except Exception:
+            pass
         return _DB
     with _LOCK:
         if _DB is not None:
@@ -289,41 +289,40 @@ def _ensure_db():
 
 # ==================== 3. 钱包层 ====================
 def coins_get(gid, qq):
-    # 读不加全局锁，利用 WAL 并发读，写由 _LOCK 串行
     _ensure_db()
-    if _DB is None:
-        return 0
-    try:
-        row = _DB.execute("SELECT money FROM wallet WHERE gid=? AND qq=?",
-                          (int(gid), int(qq))).fetchone()
-        return int(row[0]) if row else 0
-    except Exception:
-        with _LOCK:
-            if _DB is None:
-                return 0
+    with _LOCK:
+        if _DB is None:
+            return 0
+        try:
             row = _DB.execute("SELECT money FROM wallet WHERE gid=? AND qq=?",
                               (int(gid), int(qq))).fetchone()
             return int(row[0]) if row else 0
+        except Exception:
+            return 0
 
 def coins_add(gid, qq, delta):
     _ensure_db()
     with _LOCK:
         if _DB is None:
             return 0
-        row = _DB.execute("SELECT money FROM wallet WHERE gid=? AND qq=?",
-                          (int(gid), int(qq))).fetchone()
-        cur = int(row[0]) if row else 0
-        newv = cur + int(delta)
-        if newv < 0:
-            newv = 0
-        if newv > 100000000000:
-            newv = 100000000000
-        _DB.execute(
-            "INSERT INTO wallet(gid, qq, money) VALUES(?,?,?) "
-            "ON CONFLICT(gid, qq) DO UPDATE SET money=excluded.money",
-            (int(gid), int(qq), newv))
-        _maybe_commit()
-        return newv
+        try:
+            row = _DB.execute("SELECT money FROM wallet WHERE gid=? AND qq=?",
+                              (int(gid), int(qq))).fetchone()
+            cur = int(row[0]) if row else 0
+            newv = cur + int(delta)
+            if newv < 0:
+                newv = 0
+            if newv > 100000000000:
+                newv = 100000000000
+            _DB.execute(
+                "INSERT INTO wallet(gid, qq, money) VALUES(?,?,?) "
+                "ON CONFLICT(gid, qq) DO UPDATE SET money=excluded.money",
+                (int(gid), int(qq), newv))
+            _safe_commit()
+            return newv
+        except Exception:
+            _safe_rollback()
+            raise
 
 def txn_coins_acct(gid, qq, delta_coins=0, acct_updates=None):
     """原子事务：钱包 delta + 账户 kv 批量更新，同持 _LOCK 一次提交"""
@@ -333,41 +332,45 @@ def txn_coins_acct(gid, qq, delta_coins=0, acct_updates=None):
     with _LOCK:
         if _DB is None:
             return 0
-        # 钱包：单次查询去重（原双查 coins_get+SELECT 已合并）
-        row = _DB.execute("SELECT money FROM wallet WHERE gid=? AND qq=?", (int(gid), int(qq))).fetchone()
-        cur = int(row[0]) if row else 0
-        newv = cur + int(delta_coins)
-        if newv < 0:
-            newv = 0
-        if newv > 100000000000:
-            newv = 100000000000
-        _DB.execute(
-            "INSERT INTO wallet(gid, qq, money) VALUES(?,?,?) "
-            "ON CONFLICT(gid, qq) DO UPDATE SET money=excluded.money",
-            (int(gid), int(qq), newv))
-        # 账户
-        if acct_updates:
-            a = _ACC_CACHE.get((str(gid), str(qq)))
-            if a is None:
-                # 热加载
-                kv = {}
-                row2 = _DB.execute("SELECT data FROM accounts WHERE gid=? AND qq=?", (int(gid), int(qq))).fetchone()
-                if row2:
-                    try:
-                        kv = json.loads(row2[0])
-                    except Exception:
-                        kv = {}
-                a = Acct(gid, qq, kv)
-                _ACC_CACHE[(str(gid), str(qq))] = a
-            for k, v in acct_updates.items():
-                a.set(k, str(v))
+        try:
+            # 钱包：单次查询去重（原双查 coins_get+SELECT 已合并）
+            row = _DB.execute("SELECT money FROM wallet WHERE gid=? AND qq=?", (int(gid), int(qq))).fetchone()
+            cur = int(row[0]) if row else 0
+            newv = cur + int(delta_coins)
+            if newv < 0:
+                newv = 0
+            if newv > 100000000000:
+                newv = 100000000000
             _DB.execute(
-                "INSERT INTO accounts(gid, qq, data) VALUES(?,?,?) "
-                "ON CONFLICT(gid, qq) DO UPDATE SET data=excluded.data",
-                (int(gid), int(qq), json.dumps(a.kv, ensure_ascii=False)))
-            a.dirty = False
-        _maybe_commit()
-        return newv
+                "INSERT INTO wallet(gid, qq, money) VALUES(?,?,?) "
+                "ON CONFLICT(gid, qq) DO UPDATE SET money=excluded.money",
+                (int(gid), int(qq), newv))
+            # 账户
+            if acct_updates:
+                a = _ACC_CACHE.get((str(gid), str(qq)))
+                if a is None:
+                    # 热加载
+                    kv = {}
+                    row2 = _DB.execute("SELECT data FROM accounts WHERE gid=? AND qq=?", (int(gid), int(qq))).fetchone()
+                    if row2:
+                        try:
+                            kv = json.loads(row2[0])
+                        except Exception:
+                            kv = {}
+                    a = Acct(gid, qq, kv)
+                    _ACC_CACHE[(str(gid), str(qq))] = a
+                for k, v in acct_updates.items():
+                    a.set(k, str(v))
+                _DB.execute(
+                    "INSERT INTO accounts(gid, qq, data) VALUES(?,?,?) "
+                    "ON CONFLICT(gid, qq) DO UPDATE SET data=excluded.data",
+                    (int(gid), int(qq), json.dumps(a.kv, ensure_ascii=False)))
+                a.dirty = False
+            _safe_commit()
+            return newv
+        except Exception:
+            _safe_rollback()
+            raise
 
 def get_user_snapshot(gid, qq):
     """快照：一次性返回 {money, account_kv, group_kv} 供排行榜/管理台复用，避免 N+1"""
@@ -478,12 +481,16 @@ def acct_save(gid, qq):
             return
         if not a.dirty:
             return  # 千群只读指令免 DB 写
-        _DB.execute(
-            "INSERT INTO accounts(gid, qq, data) VALUES(?,?,?) "
-            "ON CONFLICT(gid, qq) DO UPDATE SET data=excluded.data",
-            (int(gid), int(qq), json.dumps(a.kv, ensure_ascii=False)))
-        a.dirty = False
-        _maybe_commit()
+        try:
+            _DB.execute(
+                "INSERT INTO accounts(gid, qq, data) VALUES(?,?,?) "
+                "ON CONFLICT(gid, qq) DO UPDATE SET data=excluded.data",
+                (int(gid), int(qq), json.dumps(a.kv, ensure_ascii=False)))
+            a.dirty = False
+            _safe_commit()
+        except Exception:
+            _safe_rollback()
+            raise
 
 # ==================== 5. 群档案层 ====================
 class _DirtyDict(dict):
@@ -705,26 +712,30 @@ def save_group(gid):
             return
         if not g._dirty:
             return  # 脏检查：千群千人“我的信息”等只读指令不再触发 DB 写
-        # 增量提交：仅脏用户（单群1000人场景 1000次→1次，3.44s→0.02s）
-        dirty_qqs = getattr(g, "_dirty_qqs", None)
-        if dirty_qqs is not None and len(dirty_qqs) > 0 and len(dirty_qqs) < len(g._users):
-            items = [(qq, g._users.get(qq, {})) for qq in list(dirty_qqs)]
-        else:
-            items = list(g._users.items())
-        for qq, kv in items:
-            if not kv:
-                _DB.execute("DELETE FROM groups WHERE gid=? AND qq=?", (int(gid), int(qq)))
-            else:
-                _DB.execute(
-                    "INSERT INTO groups(gid, qq, data) VALUES(?,?,?) "
-                    "ON CONFLICT(gid, qq) DO UPDATE SET data=excluded.data",
-                    (int(gid), int(qq), json.dumps(kv, ensure_ascii=False)))
-        g._dirty = False
         try:
-            g._dirty_qqs.clear()
+            # 增量提交：仅脏用户（单群1000人场景 1000次→1次，3.44s→0.02s）
+            dirty_qqs = getattr(g, "_dirty_qqs", None)
+            if dirty_qqs is not None and len(dirty_qqs) > 0 and len(dirty_qqs) < len(g._users):
+                items = [(qq, g._users.get(qq, {})) for qq in list(dirty_qqs)]
+            else:
+                items = list(g._users.items())
+            for qq, kv in items:
+                if not kv:
+                    _DB.execute("DELETE FROM groups WHERE gid=? AND qq=?", (int(gid), int(qq)))
+                else:
+                    _DB.execute(
+                        "INSERT INTO groups(gid, qq, data) VALUES(?,?,?) "
+                        "ON CONFLICT(gid, qq) DO UPDATE SET data=excluded.data",
+                        (int(gid), int(qq), json.dumps(kv, ensure_ascii=False)))
+            g._dirty = False
+            try:
+                g._dirty_qqs.clear()
+            except Exception:
+                pass
+            _safe_commit()
         except Exception:
-            pass
-        _maybe_commit()
+            _safe_rollback()
+            raise
 
 def user_clear(gid, qq):
     """彻底清除单用户在指定群的全部底层数据（钱包、账户、群组数据）"""
@@ -778,6 +789,7 @@ def redpack_put(gid, qq, pwd, amount):
             _DB.commit()
             return True
         except Exception:
+            _safe_rollback()
             return False
 
 def redpack_get(gid, pwd):
@@ -952,7 +964,7 @@ def init(db_path, config=None):
         d = os.path.dirname(db_path)
         if d and not os.path.isdir(d):
             os.makedirs(d, exist_ok=True)
-        _DB = sqlite3.connect(db_path, check_same_thread=False)
+        _DB = sqlite3.connect(db_path, timeout=30.0, check_same_thread=False)
         _DB_PATH = db_path
         _DB.executescript(_SQL_INIT)
         _DB.commit()
@@ -964,38 +976,42 @@ def flush_all():
     with _LOCK:
         if _DB is None:
             return
-        for key, a in list(_ACC_CACHE.items()):
-            if a.dirty:
-                a.dirty = False
-                # 空 kv 视作清理，避免幽灵账户
-                if not a.kv:
-                    _DB.execute("DELETE FROM accounts WHERE gid=? AND qq=?", (int(key[0]), int(key[1])))
-                else:
-                    _DB.execute(
-                        "INSERT INTO accounts(gid, qq, data) VALUES(?,?,?) "
-                        "ON CONFLICT(gid, qq) DO UPDATE SET data=excluded.data",
-                        (int(key[0]), int(key[1]), json.dumps(a.kv, ensure_ascii=False)))
-        for gid, g in list(_GROUP_CACHE.items()):
-            if g._dirty:
-                dirty_qqs = getattr(g, "_dirty_qqs", None)
-                if dirty_qqs and len(dirty_qqs) > 0 and len(dirty_qqs) < len(g._users):
-                    items = [(qq, g._users.get(qq, {})) for qq in list(dirty_qqs)]
-                else:
-                    items = list(g._users.items())
-                for qq, kv in items:
-                    if not kv:
-                        _DB.execute("DELETE FROM groups WHERE gid=? AND qq=?", (int(gid), int(qq)))
+        try:
+            for key, a in list(_ACC_CACHE.items()):
+                if a.dirty:
+                    a.dirty = False
+                    # 空 kv 视作清理，避免幽灵账户
+                    if not a.kv:
+                        _DB.execute("DELETE FROM accounts WHERE gid=? AND qq=?", (int(key[0]), int(key[1])))
                     else:
                         _DB.execute(
-                            "INSERT INTO groups(gid, qq, data) VALUES(?,?,?) "
+                            "INSERT INTO accounts(gid, qq, data) VALUES(?,?,?) "
                             "ON CONFLICT(gid, qq) DO UPDATE SET data=excluded.data",
-                            (int(gid), int(qq), json.dumps(kv, ensure_ascii=False)))
-                g._dirty = False
-                try:
-                    g._dirty_qqs.clear()
-                except Exception:
-                    pass
-        _DB.commit()
+                            (int(key[0]), int(key[1]), json.dumps(a.kv, ensure_ascii=False)))
+            for gid, g in list(_GROUP_CACHE.items()):
+                if g._dirty:
+                    dirty_qqs = getattr(g, "_dirty_qqs", None)
+                    if dirty_qqs and len(dirty_qqs) > 0 and len(dirty_qqs) < len(g._users):
+                        items = [(qq, g._users.get(qq, {})) for qq in list(dirty_qqs)]
+                    else:
+                        items = list(g._users.items())
+                    for qq, kv in items:
+                        if not kv:
+                            _DB.execute("DELETE FROM groups WHERE gid=? AND qq=?", (int(gid), int(qq)))
+                        else:
+                            _DB.execute(
+                                "INSERT INTO groups(gid, qq, data) VALUES(?,?,?) "
+                                "ON CONFLICT(gid, qq) DO UPDATE SET data=excluded.data",
+                                (int(gid), int(qq), json.dumps(kv, ensure_ascii=False)))
+                    g._dirty = False
+                    try:
+                        g._dirty_qqs.clear()
+                    except Exception:
+                        pass
+            _safe_commit()
+        except Exception:
+            _safe_rollback()
+            raise
 
 def merge_from(db_path):
     if not os.path.isfile(db_path):
@@ -1146,38 +1162,36 @@ def backup_user_data(force=False):
     if not BACKUP_DIR or not _DB:
         return None
     if not force:
-        try:
-            cnt = _DB.execute("SELECT COUNT(*) FROM wallet").fetchone()
-            if cnt and int(cnt[0] or 0) == 0:
-                cnt2 = _DB.execute("SELECT COUNT(*) FROM accounts").fetchone()
-                if cnt2 and int(cnt2[0] or 0) == 0:
-                    return None
-        except Exception:
-            pass
-    # 优化锁粒度：仅 checkpoint 阶段持锁，backup 阶段释放锁以免阻塞消息处理（WAL 备份本身一致）
-    try:
         with _LOCK:
             try:
-                _DB.execute("PRAGMA wal_checkpoint(TRUNCATE)")
-                _DB.commit()
+                cnt = _DB.execute("SELECT COUNT(*) FROM wallet").fetchone()
+                if cnt and int(cnt[0] or 0) == 0:
+                    cnt2 = _DB.execute("SELECT COUNT(*) FROM accounts").fetchone()
+                    if cnt2 and int(cnt2[0] or 0) == 0:
+                        return None
             except Exception:
                 pass
-        # backup 阶段不持 _LOCK，避免长阻塞；sqlite backup API 自带一致性
+    try:
         day = time.strftime("%Y-%m-%d", time.localtime(now))
         day_dir = os.path.join(BACKUP_DIR, day)
         os.makedirs(day_dir, exist_ok=True)
         fname = f"xbbot_{time.strftime('%Y%m%d_%H%M%S', time.localtime(now))}.db"
         dst = os.path.join(day_dir, fname)
         import sqlite3 as _sql
-        bck = _sql.connect(dst)
-        _DB.backup(bck)
-        bck.close()
+        bck = _sql.connect(dst, timeout=30.0)
         with _LOCK:
+            try:
+                _DB.execute("PRAGMA wal_checkpoint(PASSIVE)")
+                _safe_commit()
+            except Exception:
+                pass
+            _DB.backup(bck)
             _last_backup = now
             try:
                 recall_set("last_backup_ts", str(int(now)))
             except Exception:
                 pass
+        bck.close()
         return dst
     except Exception:
         return None
@@ -1214,9 +1228,9 @@ def recall_set(k, v):
         try:
             _DB.execute("INSERT INTO kv(k, v) VALUES(?,?) "
                         "ON CONFLICT(k) DO UPDATE SET v=excluded.v", (k_str, v_str))
-            _maybe_commit()
+            _safe_commit()
         except Exception:
-            pass
+            _safe_rollback()
 
 def recall_get(k, default=None):
     k_str = str(k)
@@ -1247,35 +1261,43 @@ def txn_two_wallets(gid, src_qq, dst_qq, amount):
     with _LOCK:
         if _DB is None:
             return False
-        row = _DB.execute("SELECT money FROM wallet WHERE gid=? AND qq=?", (int(gid), int(src_qq))).fetchone()
-        src_cur = int(row[0]) if row else 0
-        if src_cur < int(amount):
+        try:
+            row = _DB.execute("SELECT money FROM wallet WHERE gid=? AND qq=?", (int(gid), int(src_qq))).fetchone()
+            src_cur = int(row[0]) if row else 0
+            if src_cur < int(amount):
+                return False
+            row2 = _DB.execute("SELECT money FROM wallet WHERE gid=? AND qq=?", (int(gid), int(dst_qq))).fetchone()
+            dst_cur = int(row2[0]) if row2 else 0
+            new_src = src_cur - int(amount)
+            new_dst = min(100000000000, dst_cur + int(amount))
+            _DB.execute("INSERT INTO wallet(gid, qq, money) VALUES(?,?,?) ON CONFLICT(gid, qq) DO UPDATE SET money=excluded.money", (int(gid), int(src_qq), new_src))
+            _DB.execute("INSERT INTO wallet(gid, qq, money) VALUES(?,?,?) ON CONFLICT(gid, qq) DO UPDATE SET money=excluded.money", (int(gid), int(dst_qq), new_dst))
+            _safe_commit()
+            return True
+        except Exception:
+            _safe_rollback()
             return False
-        row2 = _DB.execute("SELECT money FROM wallet WHERE gid=? AND qq=?", (int(gid), int(dst_qq))).fetchone()
-        dst_cur = int(row2[0]) if row2 else 0
-        new_src = src_cur - int(amount)
-        new_dst = min(100000000000, dst_cur + int(amount))
-        _DB.execute("INSERT INTO wallet(gid, qq, money) VALUES(?,?,?) ON CONFLICT(gid, qq) DO UPDATE SET money=excluded.money", (int(gid), int(src_qq), new_src))
-        _DB.execute("INSERT INTO wallet(gid, qq, money) VALUES(?,?,?) ON CONFLICT(gid, qq) DO UPDATE SET money=excluded.money", (int(gid), int(dst_qq), new_dst))
-        _maybe_commit()
-        return True
 
 def rank_batch(gid, field="money", topn=500):
     """统一批量排行：wallet+accounts 单次查询，去 N+1；field: money/sign/stamina/charm/deposit"""
     _ensure_db()
-    if _DB is None:
-        return []
+    with _LOCK:
+        if _DB is None:
+            return []
+        try:
+            w_rows = _DB.execute("SELECT qq, money FROM wallet WHERE gid=?", (int(gid),)).fetchall()
+            wallet_map = {str(qq): int(m or 0) for qq, m in w_rows}
+            a_rows = _DB.execute("SELECT qq, data FROM accounts WHERE gid=?", (int(gid),)).fetchall()
+            acct_map = {}
+            for qq, data in a_rows:
+                try:
+                    kv = json.loads(data) if data else {}
+                except Exception:
+                    kv = {}
+                acct_map[str(qq)] = kv
+        except Exception:
+            return []
     try:
-        w_rows = _DB.execute("SELECT qq, money FROM wallet WHERE gid=?", (int(gid),)).fetchall()
-        wallet_map = {str(qq): int(m or 0) for qq, m in w_rows}
-        a_rows = _DB.execute("SELECT qq, data FROM accounts WHERE gid=?", (int(gid),)).fetchall()
-        acct_map = {}
-        for qq, data in a_rows:
-            try:
-                kv = json.loads(data) if data else {}
-            except Exception:
-                kv = {}
-            acct_map[str(qq)] = kv
         qqs = set(wallet_map.keys()) | set(acct_map.keys())
         out = []
         for q in qqs:

@@ -2,7 +2,7 @@ name: "astrbot_plugin_xbbot"
 display_name: "小白"
 short_desc: "小白统一模块：28大系统群互动玩法与现代WebUI管理台"
 desc: "小白统一模块：奴隶-签到-银行-娱乐-私聊-精灵-坐骑-超管-帮派-冒险-主菜单-WebUI管理台，SQLite存储"
-version: "0.68.18"
+version: "0.68.19"
 author: "Light"
 repo: "https://github.com/emmfax/xb"
 support_platforms:
