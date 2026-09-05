@@ -5,11 +5,11 @@
 | 项目属性 | 当前值 |
 | :--- | :--- |
 | **插件名称** | `astrbot_plugin_xbbot` (小白统一模块) |
-| **当前版本** | `v0.68.26` (已发布并在 GitHub 与本地保持对齐) |
+| **当前版本** | `v0.68.27` (已发布并在 GitHub 与本地保持对齐) |
 | **项目作者** | Light (`faxlight@faxt.top`) |
 | **开源仓库** | `https://github.com/emmfax/xb` |
 | **主代码目录** | `c:\Users\Light\Desktop\DRxb\astrbot_plugins\astrbot_plugin_xbbot` |
-| **离线发行包** | `C:\Users\Light\Desktop\DRxb\astrbot_plugin_xbbot_v0.68.26.zip` |
+| **离线发行包** | `C:\Users\Light\Desktop\DRxb\astrbot_plugin_xbbot_v0.68.27.zip` |
 | **平台依赖** | AstrBot >= 3.4.0, Python >= 3.10 (支持 3.14t/自由线程) |
 | **底层协议端** | OneBot v11 (aiocqhttp), NapCat, Lagrange 原生图文 |
 
@@ -18,12 +18,13 @@
 ## 🚦 系统运行状态诊断指标
 
 - **Python 模块语法解析**：40/40 语法解析通过 (100%)
-- **版本号强一致性对齐**：9/9 处对齐为 `0.68.26` (100%)
+- **版本号强一致性对齐**：9/9 处对齐为 `0.68.27` (100%)
+- **三对齐 (v0.68.27)**：库5表无漂移/配置92键全覆盖(补2)/映射自洽/种子配置无密钥
 - **交付审计 (v0.68.26)**：git零库零备份零缓存/源码零密钥零QQ/交付zip纯净/读副本恢复清空合并一致性确认
 - **复检结论 (v0.68.25)**：verify/压测/前后端对齐/索引一致性/投诉场景冒烟全绿，零逻辑变更
 - **读副本分离 (v0.68.24)**：`coins_get/recall_get` 走 `query_only` 独立连接，16线程×100混合读写零误差
 - **死亡代码清理 (v0.68.24)**：`pages/admin/tabs/` 12文件已删（全库零引用确认）
-- **配置项定义模式**：28 个系统，296 个配置项解析通过 (100%)
+- **配置项定义模式**：28 个系统，298 个配置项解析通过 (100%)
 - **WebUI 前端元素检查**：163 个 DOM ID 无重复；43 个 API 端点 100% 对齐后置路由
 - **主事件循环延迟 (Lag)**：0ms 纯内存极速分发（已根除旧版 56s 阻塞）
 - **数据库死锁与回滚**：已根除 `cannot rollback - no transaction is active` 与 `database is locked`

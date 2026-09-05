@@ -579,6 +579,11 @@
         "default": 5,
         "desc": "打劫银行失败关押时间(分钟，建议5~10分钟给越狱留出操作空间)"
       },
+      "打劫银行间隔": {
+        "type": "int",
+        "description": "打劫银行间隔(分钟)",
+        "default": 10
+      },
       "赌博成功概率": {
         "type": "int",
         "description": "赌博成功率%",
@@ -644,6 +649,11 @@
         "type": "int",
         "description": "越狱消耗体力",
         "default": 3
+      },
+      "进监狱增加体力": {
+        "type": "int",
+        "description": "主动进监狱增加体力",
+        "default": 10
       },
       "越狱魅力减少": {
         "type": "int",

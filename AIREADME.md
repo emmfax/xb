@@ -13,7 +13,7 @@
 ```
 astrbot_plugin_xbbot/
 ├── metadata.yaml             # AstrBot 插件元数据（版本号 9 处强校验点之一）
-├── _conf_schema.json         # 28 个系统、296 项配置定义模式，WebUI 与 AstrBot 原生配置渲染驱动
+├── _conf_schema.json         # 28 个系统、298 项配置定义模式，WebUI 与 AstrBot 原生配置渲染驱动
 ├── main.py                   # 插件 Star 主入口，事件监听分发、Web API 注册、后台定时备份守护线程
 ├── store.py                  # 现代 SQLite (WAL 模式) 存储引擎，原子事务、内存 LRU/全局缓存、自动备份与保留修剪
 ├── verify_plugin.py          # 语法解析、版本 9 处一致性、配置模式合法性全量自动化校验脚本
