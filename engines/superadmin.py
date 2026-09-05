@@ -410,10 +410,10 @@ def _version():
                 except Exception:
                     pass
         if not ver:
-            ver = "0.68.16"
+            ver = "0.68.17"
         return f"小白版本：{ver}"
     except Exception:
-        return "小白版本：0.68.16"
+        return "小白版本：0.68.17"
 
 # ---- 统一入口（测试指令仅超管，WebUI可配但不显示于MENU，已删 个人信息） ----
 _ADMIN_CMDS = ("群列表", "应用统计", "扣钱", "充钱", "清空", "重置", "禁言", "踢人", "备份xb", "备份", "开启维护", "关闭维护", "维护信息", "测试testxb", "测试testxb1", "测试testxb2", "测试testxb3", "测试testxb4", "测试testxb5", "测试testxb6", "测试testxb7", "测试testxb8", "超管列表")

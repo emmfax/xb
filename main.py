@@ -108,7 +108,7 @@ def _raw_file_response(data_bytes, filename):
 PLUGIN_ID = "astrbot_plugin_xbbot"
 PLUGIN_DESC = "小白(奴/签/银/娱/私/灵/骑/超管/帮派/冒险+主菜单+WebUI), 现代SQLite存储"
 PLUGIN_AUTHOR = "Light"
-PLUGIN_VERSION = "0.68.16"
+PLUGIN_VERSION = "0.68.17"
 PLUGIN_REPO = "https://github.com/emmfax/xb"
 
 # 复用 router 的主菜单，保持单源
@@ -243,56 +243,69 @@ class XbBot(Star):
         context.register_web_api(f"/{PLUGIN_ID}/logs/export", self.page_logs_export, ["GET", "POST"], "导出插件运行日志")
         ST.set_backup_dir(os.path.join(_BASE, "data", "backups"))
 
-    async def _ensure_bot_uin(self, event):
+    def _extract_bot_uin_sync(self, event):
+        if getattr(slave, "BOT_UIN", ""):
+            return True
+        cands = []
         try:
-            if getattr(slave, "BOT_UIN", ""):
-                return
-            cands = []
-            try:
-                fn = getattr(event, "get_self_id", None)
-                if callable(fn):
-                    v = fn()
-                    if v:
-                        cands.append(str(v).strip())
-            except Exception:
-                pass
-            for attr in ("self_id", "bot_id"):
-                try:
-                    v = getattr(event, attr, None)
-                    if v:
-                        cands.append(str(v).strip())
-                except Exception:
-                    pass
-            bot = getattr(event, "bot", None)
-            if bot is not None:
-                for attr in ("self_id", "uin", "bot_uin", "user_id"):
-                    try:
-                        v = getattr(bot, attr, None)
-                        if v and str(v).strip().isdigit():
-                            cands.append(str(v).strip())
-                    except Exception:
-                        pass
-                try:
-                    info = await bot.call_action("get_login_info")
-                    d = (info.get("data") if isinstance(info, dict) else None) or info or {}
-                    if isinstance(d, dict):
-                        for k in ("user_id", "uin", "self_id", "qq"):
-                            vv = d.get(k)
-                            if vv and str(vv).isdigit():
-                                cands.append(str(vv).strip())
-                                break
-                except Exception:
-                    pass
-            for c in cands:
-                if c.isdigit() and 5 <= len(c) <= 12:
-                    slave.BOT_UIN = c  # 纯内存自动获取，不再写盘（已移除 bot_uin 手动配置）
-                    try:
-                        slave.log(f"自动获取机器人QQ: {c}")
-                    except Exception:
-                        pass
-                    break
+            fn = getattr(event, "get_self_id", None)
+            if callable(fn):
+                v = fn()
+                if v:
+                    cands.append(str(v).strip())
         except Exception:
             pass
+        for attr in ("self_id", "bot_id"):
+            try:
+                v = getattr(event, attr, None)
+                if v:
+                    cands.append(str(v).strip())
+            except Exception:
+                pass
+        bot = getattr(event, "bot", None)
+        if bot is not None:
+            for attr in ("self_id", "uin", "bot_uin", "user_id"):
+                try:
+                    v = getattr(bot, attr, None)
+                    if v and str(v).strip().isdigit():
+                        cands.append(str(v).strip())
+                except Exception:
+                    pass
+        for c in cands:
+            if c.isdigit() and 5 <= len(c) <= 12:
+                slave.BOT_UIN = c  # 纯内存自动获取，不再写盘
+                return True
+        return False
+
+    async def _ensure_bot_uin(self, event):
+        # 极速同步提取（0ms），绝不阻塞消息主链路
+        if self._extract_bot_uin_sync(event):
+            return
+        if getattr(self, "_bot_uin_fetching", False):
+            return
+        self._bot_uin_fetching = True
+        bot = getattr(event, "bot", None)
+        if bot is not None:
+            asyncio.create_task(self._bg_fetch_bot_uin(bot))
+
+    async def _bg_fetch_bot_uin(self, bot):
+        try:
+            info = await bot.call_action("get_login_info")
+            d = (info.get("data") if isinstance(info, dict) else None) or info or {}
+            if isinstance(d, dict):
+                for k in ("user_id", "uin", "self_id", "qq"):
+                    vv = d.get(k)
+                    if vv and str(vv).isdigit() and 5 <= len(str(vv).strip()) <= 12:
+                        slave.BOT_UIN = str(vv).strip()
+                        try:
+                            slave.log(f"自动获取机器人QQ: {slave.BOT_UIN}")
+                        except Exception:
+                            pass
+                        break
+        except Exception:
+            pass
+        finally:
+            self._bot_uin_fetching = False
 
     async def _dispatch(self, event, is_private=False):
         try:
@@ -319,27 +332,25 @@ class XbBot(Star):
                 card = ""
             if card:
                 old = slave.NOTE_NAMES.get(qq, "")
-                slave.NOTE_NAMES[qq] = card
-                try:
-                    ST.register_name(qq, card)
-                except Exception:
+                if old != card:
+                    slave.NOTE_NAMES[qq] = card
                     try:
-                        ST._register_single(qq, card)
+                        ST.register_name(qq, card)
                     except Exception:
-                        pass
-                if old and old != card:
-                    try:
-                        st = slave.state(gid)
-                        if st.has_section(qq):
-                            u = st[qq]
-                            if u.get("name", "") != card:
-                                u["name"] = card
-                                slave.save(gid)
-                    except Exception:
-                        pass
-            else:
-                # 无 card 仍保证 qq 在 Known 中，无需全量 register
-                pass
+                        try:
+                            ST._register_single(qq, card)
+                        except Exception:
+                            pass
+                    if old:
+                        try:
+                            st = slave.state(gid)
+                            if st.has_section(qq):
+                                u = st[qq]
+                                if u.get("name", "") != card:
+                                    u["name"] = card
+                                    slave.save(gid)
+                        except Exception:
+                            pass
             slave.mark_known(gid, qq)
             raw = event.message_str or ""
             raw = _append_at_segments(raw, event, gid)
@@ -412,18 +423,19 @@ class XbBot(Star):
                         pass
                     yield event.plain_result(f"测试testxb 异常: {e}")
                     return
-            # 优先走加强版 dispatch（有钱/没钱 全分支）
-            try:
-                from .core.dispatch import handle_test_probes as _ext_test
-                ext = await _ext_test(raw, gid, qq, is_admin, event, is_private)
-                if ext is not None:
-                    if ext.startswith("__HANDLED__"):
-                        yield event.plain_result(ext[11:])
+            # 优先走加强版 dispatch（有钱/没钱 全分支，仅测试指令拦截，普通群聊0消耗放行）
+            if raw.strip().startswith("测试testxb"):
+                try:
+                    from .core.dispatch import handle_test_probes as _ext_test
+                    ext = await _ext_test(raw, gid, qq, is_admin, event, is_private)
+                    if ext is not None:
+                        if ext.startswith("__HANDLED__"):
+                            yield event.plain_result(ext[11:])
+                            return
+                        yield event.plain_result(ext)
                         return
-                    yield event.plain_result(ext)
-                    return
-            except Exception:
-                pass
+                except Exception:
+                    pass
             # 已委托 core/dispatch.handle_test_probes 统一处理2..9与all（含A-B双分支），此处不再重复，避免 main 与 test_harness 双维护
             if raw.strip() == "超管列表":
                 if not is_admin:
@@ -484,10 +496,11 @@ class XbBot(Star):
                         pass
                     yield event.plain_result(f"超管列表异常: {e}")
                     return
-            try:
-                ST.maybe_auto_backup()
-            except Exception:
-                pass
+            if time.time() - getattr(ST, "_LAST_BACKUP_CHECK", 0) >= 60:
+                try:
+                    ST.maybe_auto_backup()
+                except Exception:
+                    pass
             reply = await asyncio.get_running_loop().run_in_executor(None, handle, gid, qq, raw, is_private, is_admin)
             if not reply and not is_private:
                 try:

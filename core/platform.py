@@ -22,50 +22,72 @@ def bind(image_cls=None, slave_mod=None):
         _slave = slave_mod
 
 
-def _build_chain(reply):
-    import urllib.parse
+import urllib.parse
+try:
     from astrbot.api.message_components import Plain
-    try:
-        from astrbot.api.message_components import Image as _Img
-    except Exception:
-        _Img = _Image
-    if _Img is None:
-        _Img = _Image
-    text, imgs = (reply[0], list(reply[1] or [])) if isinstance(reply, tuple) else (reply, [])
+except Exception:
+    class Plain:
+        def __init__(self, text):
+            self.text = text
+
+
+def _build_chain(reply):
+    # 纯文本极速快判（0ms），接龙与绝大多数指令无图片，直接返回避免正则/urllib/文件系统开销
+    if isinstance(reply, str):
+        if "[CQ:image," not in reply:
+            return [Plain(reply)] if reply else []
+        text, imgs = reply, []
+    elif isinstance(reply, tuple):
+        text, imgs = (reply[0], list(reply[1] or []))
+    else:
+        s = str(reply) if reply is not None else ""
+        if "[CQ:image," not in s:
+            return [Plain(s)] if s else []
+        text, imgs = s, []
+
     tt = text or ""
-    def _repl(m):
-        attrs = {}
-        for a in m.group(1).split(","):
-            if "=" in a:
-                k, v = a.split("=", 1)
-                attrs[k.strip()] = v.strip()
-        f = attrs.get("file", "")
-        f_dec = urllib.parse.unquote(f)
-        if f_dec.startswith("file:///"):
-            p = f_dec[8:]
-            if len(p) > 3 and p[0] == "/" and p[2] == ":":
-                p = p[1:]
-            imgs.append(p)
-        elif f_dec.startswith("file://"):
-            p = f_dec[len("file://"):]
-            if not os.path.isfile(p) and os.path.isfile(f_dec[len("file://")+1:]):
-                p = f_dec[len("file://")+1:]
-            imgs.append(p)
-        elif f_dec:
-            imgs.append(f_dec)
-        return ""
-    tt = _CQ_IMG.sub(_repl, tt).strip()
+    if "[CQ:image," in tt:
+        def _repl(m):
+            attrs = {}
+            for a in m.group(1).split(","):
+                if "=" in a:
+                    k, v = a.split("=", 1)
+                    attrs[k.strip()] = v.strip()
+            f = attrs.get("file", "")
+            f_dec = urllib.parse.unquote(f)
+            if f_dec.startswith("file:///"):
+                p = f_dec[8:]
+                if len(p) > 3 and p[0] == "/" and p[2] == ":":
+                    p = p[1:]
+                imgs.append(p)
+            elif f_dec.startswith("file://"):
+                p = f_dec[len("file://"):]
+                if not os.path.isfile(p) and os.path.isfile(f_dec[len("file://")+1:]):
+                    p = f_dec[len("file://")+1:]
+                imgs.append(p)
+            elif f_dec:
+                imgs.append(f_dec)
+            return ""
+        tt = _CQ_IMG.sub(_repl, tt).strip()
+
     comp = [Plain(tt)] if tt else []
-    for p in imgs:
+    if imgs:
         try:
-            p_clean = str(p).strip()
-            # On Windows: /C:/path -> C:/path
-            if len(p_clean) > 3 and p_clean[0] == "/" and p_clean[2] == ":":
-                p_clean = p_clean[1:]
-            if _Img is not None and isinstance(p_clean, str) and os.path.isfile(p_clean):
-                comp.append(_Img.fromFileSystem(p_clean))
+            from astrbot.api.message_components import Image as _Img
         except Exception:
-            pass
+            _Img = _Image
+        if _Img is None:
+            _Img = _Image
+        for p in imgs:
+            try:
+                p_clean = str(p).strip()
+                # On Windows: /C:/path -> C:/path
+                if len(p_clean) > 3 and p_clean[0] == "/" and p_clean[2] == ":":
+                    p_clean = p_clean[1:]
+                if _Img is not None and isinstance(p_clean, str) and os.path.isfile(p_clean):
+                    comp.append(_Img.fromFileSystem(p_clean))
+            except Exception:
+                pass
     if not comp and tt:
         comp = [Plain(tt)]
     return comp

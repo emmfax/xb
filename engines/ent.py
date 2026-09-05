@@ -1071,11 +1071,7 @@ def _play(gid, qq, text):
                 S.recall_set(f"chain_last_qq_{gid}", str(qq))
                 S.recall_set(f"chain_last_time_{gid}", str(now))
 
-                coin = S.cfgi("娱乐配置", "接龙奖励金币", 50)
-                meili = S.cfgi("娱乐配置", "接龙奖励魅力", 0)
-                if coin or meili:
-                    _reward(gid, qq, coin, meili)
-                    if coin:
-                        return f"→ {text} 奖励{coin}{S.coin_name()}" + (f" 魅力+{meili}" if meili else "")
-                return f"→ {text}"
+                coin = 50
+                _reward(gid, qq, coin, 0)
+                return f"→ {text} 奖励{coin}{S.coin_name()}"
             return None
