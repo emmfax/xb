@@ -240,13 +240,18 @@ def _parse_custom_qa(raw):
     return out
 
 
+_CHAIN_WORDS_CACHE = None
+_CHAIN_WORDS_CFG_RAW = None
+
 def _get_chain_words():
+    global _CHAIN_WORDS_CACHE, _CHAIN_WORDS_CFG_RAW
+    raw = ST.cfg("娱乐配置", "接龙词库", "")
+    if _CHAIN_WORDS_CACHE is not None and raw == _CHAIN_WORDS_CFG_RAW:
+        return _CHAIN_WORDS_CACHE
     base = list(CHAIN_WORDS)
     try:
-        raw = ST.cfg("娱乐配置", "接龙词库", "")
         custom = _parse_custom_words(raw)
         if custom:
-            # 去重合并
             seen = set(base)
             for w in custom:
                 if w not in seen:
@@ -254,6 +259,8 @@ def _get_chain_words():
                     seen.add(w)
     except Exception:
         pass
+    _CHAIN_WORDS_CACHE = base
+    _CHAIN_WORDS_CFG_RAW = raw
     return base
 
 
@@ -856,108 +863,144 @@ def _play(gid, qq, text):
             if t.startswith(p):
                 return True
         return False
+
+    cur = _active_game(gid)
+    if not cur:
+        # 无活跃娱乐游戏，立即放行，零数据库查询
+        return None
+
     # quiz/字谜/急转弯 分别按游戏独立会话(题面存开局者 key, 参与者均可作答)
     # 需求14/15：中途不提醒未加入者（非参与者直接静默放行）；参与者发其他指令时放行
     # label -> 配置前缀映射（字谜 实际为 猜字谜）
     _LABEL_CFG = {"答题": "答题", "字谜": "猜字谜", "急转弯": "急转弯"}
-    for kind, label in (("quiz", "答题"), ("miri", "字谜"), ("trick", "急转弯")):
-        owner = S.recall_get(f"{kind}_owner_{gid}")
-        if not owner:
-            continue
-        try:
-            start_val = S.recall_get(f"{kind}_start_{gid}", "0")
-            start_ts = int(start_val or "0")
-            if start_ts <= 0 or (int(time.time()) - start_ts) > 180:
+    if cur in ("答题", "字谜", "猜字谜", "急转弯"):
+        for kind, label in (("quiz", "答题"), ("miri", "字谜"), ("trick", "急转弯")):
+            owner = S.recall_get(f"{kind}_owner_{gid}")
+            if not owner:
+                continue
+            try:
+                start_val = S.recall_get(f"{kind}_start_{gid}", "0")
+                start_ts = int(start_val or "0")
+                if start_ts <= 0 or (int(time.time()) - start_ts) > 180:
+                    S.recall_set(f"{kind}_{gid}_{owner}", "")
+                    S.recall_set(f"{kind}_owner_{gid}", "")
+                    S.recall_set(f"{kind}_players_{gid}", "")
+                    S.recall_set(f"{kind}_start_{gid}", "")
+                    S.recall_set(f"ent_game_{gid}", "")
+                    continue
+            except Exception:
+                pass
+            if not _is_player(gid, qq, kind):
+                continue
+            ans = S.recall_get(f"{kind}_{gid}_{owner}")
+            if not ans:
+                continue
+            if _is_cmd(text):
+                continue
+            if text.strip() == ans:
                 S.recall_set(f"{kind}_{gid}_{owner}", "")
                 S.recall_set(f"{kind}_owner_{gid}", "")
                 S.recall_set(f"{kind}_players_{gid}", "")
                 S.recall_set(f"{kind}_start_{gid}", "")
                 S.recall_set(f"ent_game_{gid}", "")
-                continue
-        except Exception:
-            pass
-        if not _is_player(gid, qq, kind):
-            continue
-        ans = S.recall_get(f"{kind}_{gid}_{owner}")
-        if not ans:
-            continue
-        if _is_cmd(text):
-            continue
-        if text.strip() == ans:
-            S.recall_set(f"{kind}_{gid}_{owner}", "")
-            S.recall_set(f"{kind}_owner_{gid}", "")
-            S.recall_set(f"{kind}_players_{gid}", "")
-            S.recall_set(f"{kind}_start_{gid}", "")
-            S.recall_set(f"ent_game_{gid}", "")
-            # 奖励（全量可配，默认值保持旧行为）
-            cfg_prefix = _LABEL_CFG.get(label, label)
-            coin = S.cfgi("娱乐配置", f"{cfg_prefix}奖励金币", 88 if label!="答题" else 128)
-            meili = S.cfgi("娱乐配置", f"{cfg_prefix}奖励魅力", 1)
-            _reward(gid, qq, coin, meili)
-            return f"恭喜！【{label}】答案正确：{ans} 奖励{coin}{S.coin_name()} 魅力+{meili}"
-        return f"答案不对，再想想~（发送【退出{label}】结束）"
-    # 猜数(题面存开局者 key, 参与者均可作答; 非参与者/非数字 放行到接龙)
-    owner = S.recall_get(f"guessnum_owner_{gid}")
-    if owner:
-        try:
-            start_val = S.recall_get(f"guessnum_start_{gid}", "0")
-            start_ts = int(start_val or "0")
-            if start_ts <= 0 or (int(time.time()) - start_ts) > 180:
-                S.recall_set(f"guessnum_{gid}_{owner}", "")
-                S.recall_set(f"guessnum_owner_{gid}", "")
-                S.recall_set(f"guessnum_players_{gid}", "")
-                S.recall_set(f"guessnum_start_{gid}", "")
-                S.recall_set(f"ent_game_{gid}", "")
-                owner = None
-        except Exception:
-            pass
-    if owner and _is_player(gid, qq, "guessnum"):
-        g = S.recall_get(f"guessnum_{gid}_{owner}")
-        if g and text.strip().isdigit():
-            v = int(text.strip())
-            n = int(g)
-            if v == n:
-                S.recall_set(f"guessnum_{gid}_{owner}", "")
-                S.recall_set(f"guessnum_owner_{gid}", "")
-                S.recall_set(f"guessnum_players_{gid}", "")
-                S.recall_set(f"guessnum_start_{gid}", "")
-                S.recall_set(f"ent_game_{gid}", "")
-                coin = S.cfgi("娱乐配置", "猜数奖励金币", 188)
-                meili = S.cfgi("娱乐配置", "猜数奖励魅力", 2)
+                # 奖励（全量可配，默认值保持旧行为）
+                cfg_prefix = _LABEL_CFG.get(label, label)
+                coin = S.cfgi("娱乐配置", f"{cfg_prefix}奖励金币", 88 if label!="答题" else 128)
+                meili = S.cfgi("娱乐配置", f"{cfg_prefix}奖励魅力", 1)
                 _reward(gid, qq, coin, meili)
-                return f"🎉 猜中啦！答案是 {n}！奖励{coin}{S.coin_name()} 魅力+{meili}"
-            return "📉 小了，再猜！" if v < n else "📈 大了，再猜！"
+                return f"恭喜！【{label}】答案正确：{ans} 奖励{coin}{S.coin_name()} 魅力+{meili}"
+            return f"答案不对，再想想~（发送【退出{label}】结束）"
+    # 猜数(题面存开局者 key, 参与者均可作答)
+    elif cur == "猜数":
+        owner = S.recall_get(f"guessnum_owner_{gid}")
+        if owner:
+            try:
+                start_val = S.recall_get(f"guessnum_start_{gid}", "0")
+                start_ts = int(start_val or "0")
+                if start_ts <= 0 or (int(time.time()) - start_ts) > 180:
+                    S.recall_set(f"guessnum_{gid}_{owner}", "")
+                    S.recall_set(f"guessnum_owner_{gid}", "")
+                    S.recall_set(f"guessnum_players_{gid}", "")
+                    S.recall_set(f"guessnum_start_{gid}", "")
+                    S.recall_set(f"ent_game_{gid}", "")
+                    owner = None
+            except Exception:
+                pass
+        if owner and _is_player(gid, qq, "guessnum"):
+            g = S.recall_get(f"guessnum_{gid}_{owner}")
+            if g and text.strip().isdigit():
+                v = int(text.strip())
+                n = int(g)
+                if v == n:
+                    S.recall_set(f"guessnum_{gid}_{owner}", "")
+                    S.recall_set(f"guessnum_owner_{gid}", "")
+                    S.recall_set(f"guessnum_players_{gid}", "")
+                    S.recall_set(f"guessnum_start_{gid}", "")
+                    S.recall_set(f"ent_game_{gid}", "")
+                    coin = S.cfgi("娱乐配置", "猜数奖励金币", 188)
+                    meili = S.cfgi("娱乐配置", "猜数奖励魅力", 2)
+                    _reward(gid, qq, coin, meili)
+                    return f"🎉 猜中啦！答案是 {n}！奖励{coin}{S.coin_name()} 魅力+{meili}"
+                return "📉 小了，再猜！" if v < n else "📈 大了，再猜！"
     # 二四点（群组共享，可加入，30秒内）
-    owner = S.recall_get(f"game24_owner_{gid}")
-    if owner:
-        try:
-            start_val = S.recall_get(f"game24_start_{gid}", "0")
-            start_ts = int(start_val or "0")
-            if start_ts <= 0 or (int(time.time()) - start_ts) > 180:
-                S.recall_set(f"game24_{gid}_{owner}", "")
-                S.recall_set(f"game24_owner_{gid}", "")
-                S.recall_set(f"game24_players_{gid}", "")
-                S.recall_set(f"game24_start_{gid}", "")
-                S.recall_set(f"ent_game_{gid}", "")
-                owner = None
-        except Exception:
-            pass
-    if owner:
-        # 非参与者：只有发送本次题目数字时才提醒，否则静默（需求18）
-        if not _is_player(gid, qq, "game24"):
-            gtmp = S.recall_get(f"game24_{gid}_{owner}", "")
-            if gtmp and re.search(r"\d", text):
-                nums_tmp = [int(x) for x in gtmp.split("|") if x != ""]
-                used_tmp = [int(x) for x in re.findall(r"\d+", text) if x.isdigit()]
-                if any(u in nums_tmp for u in used_tmp):
-                    return "您不是本局参与者，无法参与二四点！发送【加入二四点】加入吧~"
-            # 非数字/非相关数字则放行到接龙
-            pass
+    elif cur == "二四点":
+        owner = S.recall_get(f"game24_owner_{gid}")
+        if owner:
+            try:
+                start_val = S.recall_get(f"game24_start_{gid}", "0")
+                start_ts = int(start_val or "0")
+                if start_ts <= 0 or (int(time.time()) - start_ts) > 180:
+                    S.recall_set(f"game24_{gid}_{owner}", "")
+                    S.recall_set(f"game24_owner_{gid}", "")
+                    S.recall_set(f"game24_players_{gid}", "")
+                    S.recall_set(f"game24_start_{gid}", "")
+                    S.recall_set(f"ent_game_{gid}", "")
+                    owner = None
+            except Exception:
+                pass
+        if owner:
+            # 非参与者：只有发送本次题目数字时才提醒，否则静默（需求18）
+            if not _is_player(gid, qq, "game24"):
+                gtmp = S.recall_get(f"game24_{gid}_{owner}", "")
+                if gtmp and re.search(r"\d", text):
+                    nums_tmp = [int(x) for x in gtmp.split("|") if x != ""]
+                    used_tmp = [int(x) for x in re.findall(r"\d+", text) if x.isdigit()]
+                    if any(u in nums_tmp for u in used_tmp):
+                        return "您不是本局参与者，无法参与二四点！发送【加入二四点】加入吧~"
+                # 非数字/非相关数字则放行
+                pass
+            else:
+                g = S.recall_get(f"game24_{gid}_{owner}", "")
+                # 兼容旧单人键
+                if not g:
+                    g = S.recall_get(f"game24_{gid}_{qq}", "")
+                if g and re.search(r"[\+\-\*/()×÷]", text):
+                    nums = [int(x) for x in g.split("|") if x != ""]
+                    t = text.strip().replace("×", "*").replace("÷", "/").replace("（", "(").replace("）", ")")
+                    try:
+                        used = [int(x) for x in re.findall(r"\d+", t)]
+                        if sorted(used) == sorted(nums):
+                            val = _safe_eval_24(t)
+                            if val is None:
+                                return "算式有误，请检查（只用 %s 和 +-*/ 括号）：%s" % (" ".join(map(str, nums)), t)
+                            if abs(val - 24) < 1e-6:
+                                S.recall_set(f"game24_{gid}_{owner}", "")
+                                S.recall_set(f"game24_{gid}_{qq}", "")
+                                S.recall_set(f"game24_owner_{gid}", "")
+                                S.recall_set(f"game24_players_{gid}", "")
+                                S.recall_set(f"game24_start_{gid}", "")
+                                S.recall_set(f"ent_game_{gid}", "")
+                                coin = S.cfgi("娱乐配置", "二四点奖励金币", 128)
+                                meili = S.cfgi("娱乐配置", "二四点奖励魅力", 1)
+                                _reward(gid, qq, coin, meili)
+                                return f"太棒了！『{t}』= 24，二四点通关！奖励{coin}{S.coin_name()} 魅力+{meili}"
+                            return "算式得数不是 24，再试试~"
+                        return "请只用给出的 4 个数！"
+                    except Exception:
+                        return "算式有误，请检查（只用 %s 和 +-*/ 括号）：%s" % (" ".join(map(str, nums)), t)
         else:
-            g = S.recall_get(f"game24_{gid}_{owner}", "")
-            # 兼容旧单人键
-            if not g:
-                g = S.recall_get(f"game24_{gid}_{qq}", "")
+            # 兼容旧单人二四点（无owner时）
+            g = S.recall_get(f"game24_{gid}_{qq}")
             if g and re.search(r"[\+\-\*/()×÷]", text):
                 nums = [int(x) for x in g.split("|") if x != ""]
                 t = text.strip().replace("×", "*").replace("÷", "/").replace("（", "(").replace("）", ")")
@@ -968,11 +1011,7 @@ def _play(gid, qq, text):
                         if val is None:
                             return "算式有误，请检查（只用 %s 和 +-*/ 括号）：%s" % (" ".join(map(str, nums)), t)
                         if abs(val - 24) < 1e-6:
-                            S.recall_set(f"game24_{gid}_{owner}", "")
                             S.recall_set(f"game24_{gid}_{qq}", "")
-                            S.recall_set(f"game24_owner_{gid}", "")
-                            S.recall_set(f"game24_players_{gid}", "")
-                            S.recall_set(f"game24_start_{gid}", "")
                             S.recall_set(f"ent_game_{gid}", "")
                             coin = S.cfgi("娱乐配置", "二四点奖励金币", 128)
                             meili = S.cfgi("娱乐配置", "二四点奖励魅力", 1)
@@ -982,83 +1021,61 @@ def _play(gid, qq, text):
                     return "请只用给出的 4 个数！"
                 except Exception:
                     return "算式有误，请检查（只用 %s 和 +-*/ 括号）：%s" % (" ".join(map(str, nums)), t)
-            # 二四点非算式，放行到接龙
-    else:
-        # 兼容旧单人二四点（无owner时）
-        g = S.recall_get(f"game24_{gid}_{qq}")
-        if g and re.search(r"[\+\-\*/()×÷]", text):
-            nums = [int(x) for x in g.split("|") if x != ""]
-            t = text.strip().replace("×", "*").replace("÷", "/").replace("（", "(").replace("）", ")")
-            try:
-                used = [int(x) for x in re.findall(r"\d+", t)]
-                if sorted(used) == sorted(nums):
-                    val = _safe_eval_24(t)
-                    if val is None:
-                        return "算式有误，请检查（只用 %s 和 +-*/ 括号）：%s" % (" ".join(map(str, nums)), t)
-                    if abs(val - 24) < 1e-6:
-                        S.recall_set(f"game24_{gid}_{qq}", "")
-                        S.recall_set(f"ent_game_{gid}", "")
-                        coin = S.cfgi("娱乐配置", "二四点奖励金币", 128)
-                        meili = S.cfgi("娱乐配置", "二四点奖励魅力", 1)
-                        _reward(gid, qq, coin, meili)
-                        return f"太棒了！『{t}』= 24，二四点通关！奖励{coin}{S.coin_name()} 魅力+{meili}"
-                    return "算式得数不是 24，再试试~"
-                return "请只用给出的 4 个数！"
-            except Exception:
-                return "算式有误，请检查（只用 %s 和 +-*/ 括号）：%s" % (" ".join(map(str, nums)), t)
     # 接龙延续: 只允许参与者, 词尾字需接上
     # 需求14：仅当提及结尾字时才提醒未加入；指令不视为接龙词
-    owner = S.recall_get(f"chain_owner_{gid}")
-    if owner:
-        # 若是其他系统指令，直接放行不作接龙处理
-        if _is_cmd(text):
-            return None
-        last = S.recall_get(f"chain_{gid}", "")
-        start = S.recall_get(f"chain_start_{gid}", "0")
-        try:
-            start_ts = int(start or "0")
-            if start_ts <= 0 or (int(time.time()) - start_ts) > 180:
+    elif cur == "接龙":
+        owner = S.recall_get(f"chain_owner_{gid}")
+        if owner:
+            # 若是其他系统指令，直接放行不作接龙处理
+            if _is_cmd(text):
+                return None
+            last = S.recall_get(f"chain_{gid}", "")
+            start = S.recall_get(f"chain_start_{gid}", "0")
+            try:
+                start_ts = int(start or "0")
+                if start_ts <= 0 or (int(time.time()) - start_ts) > 180:
+                    _clean_expired_game(gid, max_seconds=0)
+                    return "接龙超时结束~"
+            except Exception:
                 _clean_expired_game(gid, max_seconds=0)
                 return "接龙超时结束~"
-        except Exception:
-            _clean_expired_game(gid, max_seconds=0)
-            return "接龙超时结束~"
-        if not _is_player(gid, qq, "chain"):
-            # 仅当用户尝试接龙（2-6字且首字接尾字）才提醒
-            if text and 2 <= len(text) <= 6 and not text.startswith(("开始", "加入", "退出")) and last and text[0] == last[-1]:
-                return "您不是本局参与者，无法接龙！发送【加入接龙】加入吧~"
+            if not _is_player(gid, qq, "chain"):
+                # 仅当非参与者尝试接龙（2-6字且首字接尾字）才提醒
+                if text and 2 <= len(text) <= 6 and not text.startswith(("开始", "加入", "退出")) and last and text[0] == last[-1]:
+                    return "您不是本局参与者，无法接龙！发送【加入接龙】加入吧~"
+                return None
+            if text and 2 <= len(text) <= 6 and not text.startswith(("开始", "加入", "退出")):
+                if last:
+                    # 关键优化：首字不匹配上一词尾字，说明参与者在群里正常闲聊，绝不拦截轰炸，直接静默放行！
+                    if text[0] != last[-1]:
+                        return None
+                    if text == last:
+                        return f"不能重复接上一个完全相同的词语「{last}」哦，请换一个词~"
+                used_str = S.recall_get(f"chain_used_{gid}", "")
+                used_list = [w for w in used_str.split(",") if w]
+                if text in used_list:
+                    return f"词语「{text}」在本轮接龙中已经使用过了，请换一个新词吧~"
+
+                now = int(time.time())
+                last_qq = S.recall_get(f"chain_last_qq_{gid}", "")
+                last_time = int(S.recall_get(f"chain_last_time_{gid}", "0") or 0)
+                if last_qq == str(qq) and now - last_time < 2:
+                    return "接得太快啦，深呼吸一下再接吧~"
+
+                used_list.append(text)
+                if len(used_list) > 100:
+                    used_list = used_list[-100:]
+                S.recall_set(f"chain_used_{gid}", ",".join(used_list))
+                S.recall_set(f"chain_{gid}", text)
+                S.recall_set(f"chain_start_{gid}", str(now))
+                S.recall_set(f"chain_last_qq_{gid}", str(qq))
+                S.recall_set(f"chain_last_time_{gid}", str(now))
+
+                coin = S.cfgi("娱乐配置", "接龙奖励金币", 50)
+                meili = S.cfgi("娱乐配置", "接龙奖励魅力", 0)
+                if coin or meili:
+                    _reward(gid, qq, coin, meili)
+                    if coin:
+                        return f"→ {text} 奖励{coin}{S.coin_name()}" + (f" 魅力+{meili}" if meili else "")
+                return f"→ {text}"
             return None
-        if text and 2 <= len(text) <= 6 and not text.startswith(("开始", "加入", "退出")):
-            if last:
-                if text == last:
-                    return f"不能重复接上一个完全相同的词语「{last}」哦，请换一个词~"
-                if text[0] != last[-1]:
-                    return f"接不上哦！上一个词的尾字是「{last[-1]}」，请用这个字开头~"
-            used_str = S.recall_get(f"chain_used_{gid}", "")
-            used_list = [w for w in used_str.split(",") if w]
-            if text in used_list:
-                return f"词语「{text}」在本轮接龙中已经使用过了，请换一个新词吧~"
-
-            now = int(time.time())
-            last_qq = S.recall_get(f"chain_last_qq_{gid}", "")
-            last_time = int(S.recall_get(f"chain_last_time_{gid}", "0") or 0)
-            if last_qq == str(qq) and now - last_time < 2:
-                return "接得太快啦，深呼吸一下再接吧~"
-
-            used_list.append(text)
-            if len(used_list) > 100:
-                used_list = used_list[-100:]
-            S.recall_set(f"chain_used_{gid}", ",".join(used_list))
-            S.recall_set(f"chain_{gid}", text)
-            S.recall_set(f"chain_start_{gid}", str(now))
-            S.recall_set(f"chain_last_qq_{gid}", str(qq))
-            S.recall_set(f"chain_last_time_{gid}", str(now))
-
-            coin = S.cfgi("娱乐配置", "接龙奖励金币", 50)
-            meili = S.cfgi("娱乐配置", "接龙奖励魅力", 0)
-            if coin or meili:
-                _reward(gid, qq, coin, meili)
-                if coin:
-                    return f"→ {text} 奖励{coin}{S.coin_name()}" + (f" 魅力+{meili}" if meili else "")
-            return f"→ {text}"
-    return None
