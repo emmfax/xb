@@ -2248,14 +2248,14 @@ document.querySelectorAll(".harrow[data-cat]").forEach((btn) =>
     if (cat) cat.scrollBy({ left: parseInt(btn.dataset.cat, 10) * 240, behavior: "smooth" });
   })
 );
-["cfgSearch", "userSearch", "cmdSearch", "imgSearch", "slaveSearch", "spiritSearch", "groupsSearch"].forEach((id) => {
+["cfgSearch", "userSearch", "cmdSearch", "imgSearch", "slaveSearch", "spiritUserSearch", "groupsSearch"].forEach((id) => {
   const el = document.getElementById(id);
   if (el) el.addEventListener("input", () => {
     if (id === "cfgSearch") filterCfg();
     else if (id === "userSearch") filterUsers();
     else if (id === "cmdSearch") filterCmds();
     else if (id === "slaveSearch") renderSlaveTable();
-    else if (id === "spiritSearch") renderSpiritUsersTable();
+    else if (id === "spiritUserSearch") renderSpiritUsersTable();
     else if (id === "groupsSearch") renderGroupsTable();
     else if (IMG_CACHE && IMG_CACHE.dir !== undefined) renderImages(IMG_CACHE);
   });
@@ -2846,7 +2846,7 @@ async function loadSpiritUsers(){
 function renderSpiritUsersTable() {
   const body = document.getElementById("spiritUsersBody");
   if (!body) return;
-  const q2 = (document.getElementById("spiritSearch")?.value || "").trim().toLowerCase();
+  const q2 = (document.getElementById("spiritUserSearch")?.value || "").trim().toLowerCase();
   let rows = [...RAW_SPIRIT_USERS];
   if (q2) {
     rows = rows.filter(r => (String(r.qq) + String(r.name || "") + String(r.active || "") + String(r.best || "") + String(r.gid || "")).toLowerCase().includes(q2));
@@ -3059,7 +3059,7 @@ document.getElementById("btnSlaveRefresh")?.addEventListener("click", loadSlaveU
 document.getElementById("slaveSearch")?.addEventListener("input", renderSlaveTable);
 document.getElementById("slaveSort")?.addEventListener("change", renderSlaveTable);
 document.getElementById("btnSpiritUsersRefresh")?.addEventListener("click", loadSpiritUsers);
-document.getElementById("spiritSearch")?.addEventListener("input", renderSpiritUsersTable);
+document.getElementById("spiritUserSearch")?.addEventListener("input", renderSpiritUsersTable);
 document.getElementById("spiritUserSort")?.addEventListener("change", renderSpiritUsersTable);
 
 // 表头点击快速排序事件委托
