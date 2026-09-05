@@ -113,6 +113,28 @@ def parse_at(text):
 _LOCK = threading.RLock()
 _DB = None
 _DB_PATH = ""
+# 读副本连接：WAL 下只读查询走独立连接+细锁，不再排队等全局写锁（高频 coins_get/recall_get 提速）
+_DB_R = None
+_RLOCK = threading.RLock()
+
+
+def _read_conn():
+    """懒加载只读连接（query_only），失败返回 None 由调用方回退主连接"""
+    global _DB_R
+    if _DB_R is not None:
+        return _DB_R
+    try:
+        if not _DB_PATH or not os.path.isfile(_DB_PATH):
+            return None
+        c = sqlite3.connect(_DB_PATH, timeout=30.0, check_same_thread=False)
+        try:
+            c.execute("PRAGMA query_only=ON")
+        except Exception:
+            pass
+        _DB_R = c
+        return _DB_R
+    except Exception:
+        return None
 _CONFIG = {}
 _ASTRBOT_CFG = None
 try:
@@ -284,6 +306,16 @@ def _ensure_db():
 # ==================== 3. 钱包层 ====================
 def coins_get(gid, qq):
     _ensure_db()
+    # 读副本快路径：不持全局写锁，WAL 读与写并行
+    try:
+        rc = _read_conn()
+        if rc is not None:
+            with _RLOCK:
+                row = rc.execute("SELECT money FROM wallet WHERE gid=? AND qq=?",
+                                 (int(gid), int(qq))).fetchone()
+            return int(row[0]) if row else 0
+    except Exception:
+        pass
     with _LOCK:
         if _DB is None:
             return 0
@@ -971,7 +1003,7 @@ def get_persistent_data_dir(plugin_base=""):
     return fallback
 
 def init(db_path, config=None):
-    global _DB, _DB_PATH
+    global _DB, _DB_PATH, _DB_R
     with _LOCK:
         if _DB is not None and _DB_PATH == db_path:
             if isinstance(config, dict):
@@ -980,6 +1012,13 @@ def init(db_path, config=None):
         d = os.path.dirname(db_path)
         if d and not os.path.isdir(d):
             os.makedirs(d, exist_ok=True)
+        # 切换库时旧读副本先失效，由 _read_conn 懒重建
+        try:
+            if _DB_R is not None:
+                _DB_R.close()
+        except Exception:
+            pass
+        _DB_R = None
         _DB = sqlite3.connect(db_path, timeout=30.0, check_same_thread=False)
         _DB_PATH = db_path
         _DB.executescript(_SQL_INIT)
@@ -1334,6 +1373,19 @@ def recall_get(k, default=None):
         if k_str in _KV_CACHE:
             return _KV_CACHE[k_str]
     _ensure_db()
+    # 读副本快路径：kv 未命中缓存时不阻塞写锁
+    try:
+        rc = _read_conn()
+        if rc is not None:
+            with _RLOCK:
+                row = rc.execute("SELECT v FROM kv WHERE k=?", (k_str,)).fetchone()
+            val = row[0] if row else default
+            if val is not None:
+                with _KV_CACHE_LOCK:
+                    _KV_CACHE[k_str] = str(val)
+            return val
+    except Exception:
+        pass
     with _LOCK:
         if _DB is None:
             return default

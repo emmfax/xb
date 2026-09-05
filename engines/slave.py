@@ -570,7 +570,9 @@ def cmd_buy_slave(gid, qq, target, st):
         if prot_qq and st.has_section(prot_qq):
             return T.BUY_PROTECTED.format(who=uname(st, prot_qq), min=left)
         return T.PROTECTED_CANNOT_BUY.format(min=left)
-    slots = int(uget(buyer, "slave_slots", str(cfgi("设置", "奴隶个数", 2))))
+    slots = _safe_int(uget(buyer, "slave_slots", str(cfgi("设置", "奴隶个数", 2))), cfgi("设置", "奴隶个数", 2))
+    if slots <= 0:
+        slots = max(1, cfgi("设置", "奴隶个数", 2))
     mine = slaves_of(st, qq)
     if len(mine) >= slots:
         return T.BUY_SLOT_FULL.format(cap=slots)
@@ -784,7 +786,7 @@ def cmd_rename(gid, qq, target, newname, st):
 
 def cmd_buyslot(gid, qq, st):
     u = U(st, qq)
-    cur = int(uget(u, "slave_slots", str(cfgi("设置", "奴隶个数", 2))))
+    cur = _safe_int(uget(u, "slave_slots", str(cfgi("设置", "奴隶个数", 2))), cfgi("设置", "奴隶个数", 2))
     cap = cfgi("设置", "奴隶个数上限", 8)
     if cur >= cap:
         return T.SLOT_SYS_MAX
@@ -993,13 +995,17 @@ def cmd_work_collect(gid, qq, st):
         return T.WORK_WAIT.format(min=int(left / 60) + 1)
 
     ratio = cfgi("费用配置", "工资比例", 50)
-    total = int(uget(u, "work_wage") or 0)
+    total = _safe_int(uget(u, "work_wage"), 0)
     lines = [T.WORK_COLLECT.format(total=total)]
     wage_paid = 0
     for s in my:
         su = U(st, s)
-        wage = int(uget(su, "_work_wage") or 0)
-        if int(uget(su, "price") or 0) < 100:
+        # 打工后新买入的奴隶无本轮工资快照，不参与结算（防0工资误导与快照脱节）
+        if not str(uget(su, "_work_wage", "") or "").strip():
+            lines.append(f"[{uname(st,s)}]新加入未参与本次打工，无工资")
+            continue
+        wage = _safe_int(uget(su, "_work_wage"), 0)
+        if _safe_int(uget(su, "price"), 0) < 100:
             lines.append(f"[{uname(st,s)}]{T.WORK_NO_WAGE}")
             continue
         got = wage * ratio // 100
@@ -1163,8 +1169,8 @@ def cmd_fight(gid, qq, target, st):
 
     if win:
         lines.append(T.FIGHT_WIN)
-        free_slot = len(slaves_of(st, qq)) < int(uget(U(st, qq), "slave_slots",
-                                                  str(cfgi("设置", "奴隶个数", 2))))
+        free_slot = len(slaves_of(st, qq)) < _safe_int(uget(U(st, qq), "slave_slots",
+                                                  str(cfgi("设置", "奴隶个数", 2))), cfgi("设置", "奴隶个数", 2))
         stealable = [s for s in d_slaves]
         if stealable and free_slot:
             if _shield(tid):
@@ -1197,8 +1203,8 @@ def cmd_fight(gid, qq, target, st):
         shield = _shield(qq)
         stealable = [s for s in a_slaves]
         if stealable and not shield:
-            free_t = len(slaves_of(st, tid)) < int(uget(U(st, tid), "slave_slots",
-                                                   str(cfgi("设置", "奴隶个数", 2))))
+            free_t = len(slaves_of(st, tid)) < _safe_int(uget(U(st, tid), "slave_slots",
+                                                   str(cfgi("设置", "奴隶个数", 2))), cfgi("设置", "奴隶个数", 2))
             if free_t:
                 victim = _random.choice(stealable)
                 uset(U(st, victim), "owner", tid)
@@ -1377,7 +1383,7 @@ def cmd_treasure_up(gid, qq, tname, st):
     need = cfgi("设置", f"{idx}阶宝物消耗宝物数量", stage + 1)
     cost = cfgi("设置", f"{idx}阶宝物花费", 77777)
     prob = cfgi("设置", f"{idx}阶宝物概率", 50)
-    have = int(uget(u, tname, "0"))
+    have = _safe_int(uget(u, tname, "0"), 0)
     if have < need:
         return T.TUP_NO_ITEM + f"(需{tname}x{need}, 现有{have})"
     if coins_get(gid, qq) < cost:
@@ -1514,8 +1520,8 @@ def cmd_treasure_menu(gid, qq, st):
 
     lines = ["🎁 宝物图鉴", "━━━━━━━━━━━━━━"]
     for t in treas:
-        cnt = int(uget(u, t, "0") or 0)
-        stage = int(uget(u, t + "升阶", "0") or 0)
+        cnt = _safe_int(uget(u, t, "0"), 0)
+        stage = _safe_int(uget(u, t + "升阶", "0"), 0)
         own = f"✔已持有{cnt}个" if cnt > 0 else "未持有"
         lines.append(f"◆ {t}　{own}")
         e = eff(t)

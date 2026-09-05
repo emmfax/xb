@@ -635,6 +635,13 @@ def _recall_get(k, d=None):
 
 # ---- 统一入口 ----
 def handle(gid, qq, raw):
+    try:
+        return _handle_inner(gid, qq, raw)
+    except Exception:
+        return "精灵系统繁忙，请稍后重试~"
+
+
+def _handle_inner(gid, qq, raw):
     text = (raw or "").strip()
     if not text:
         return None

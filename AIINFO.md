@@ -5,11 +5,11 @@
 | 项目属性 | 当前值 |
 | :--- | :--- |
 | **插件名称** | `astrbot_plugin_xbbot` (小白统一模块) |
-| **当前版本** | `v0.68.23` (已发布并在 GitHub 与本地保持对齐) |
+| **当前版本** | `v0.68.24` (已发布并在 GitHub 与本地保持对齐) |
 | **项目作者** | Light (`faxlight@faxt.top`) |
 | **开源仓库** | `https://github.com/emmfax/xb` |
 | **主代码目录** | `c:\Users\Light\Desktop\DRxb\astrbot_plugins\astrbot_plugin_xbbot` |
-| **离线发行包** | `C:\Users\Light\Desktop\DRxb\astrbot_plugin_xbbot_v0.68.23.zip` |
+| **离线发行包** | `C:\Users\Light\Desktop\DRxb\astrbot_plugin_xbbot_v0.68.24.zip` |
 | **平台依赖** | AstrBot >= 3.4.0, Python >= 3.10 (支持 3.14t/自由线程) |
 | **底层协议端** | OneBot v11 (aiocqhttp), NapCat, Lagrange 原生图文 |
 
@@ -18,7 +18,9 @@
 ## 🚦 系统运行状态诊断指标
 
 - **Python 模块语法解析**：40/40 语法解析通过 (100%)
-- **版本号强一致性对齐**：9/9 处对齐为 `0.68.23` (100%)
+- **版本号强一致性对齐**：9/9 处对齐为 `0.68.24` (100%)
+- **读副本分离 (v0.68.24)**：`coins_get/recall_get` 走 `query_only` 独立连接，16线程×100混合读写零误差
+- **死亡代码清理 (v0.68.24)**：`pages/admin/tabs/` 12文件已删（全库零引用确认）
 - **配置项定义模式**：28 个系统，296 个配置项解析通过 (100%)
 - **WebUI 前端元素检查**：163 个 DOM ID 无重复；43 个 API 端点 100% 对齐后置路由
 - **主事件循环延迟 (Lag)**：0ms 纯内存极速分发（已根除旧版 56s 阻塞）

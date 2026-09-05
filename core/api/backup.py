@@ -254,9 +254,11 @@ async def handle_db_doctor(request, plugin_base=""):
         if wal_path and os.path.isfile(wal_path):
             size_before += os.path.getsize(wal_path)
 
+        # 只读体检持锁快查；VACUUM/TRUNCATE 等重型整理移出锁外并 to_thread 执行，
+        # 避免 WebUI 一次体检卡死全群读写数秒
         with ST._LOCK:
             cur = ST._DB.cursor()
-            
+
             # 3. 运行完整性检查
             cur.execute("PRAGMA integrity_check(10)")
             integrity_rows = cur.fetchall()
@@ -271,19 +273,38 @@ async def handle_db_doctor(request, plugin_base=""):
                 except Exception:
                     counts[tbl] = 0
 
-            # 5. 执行 WAL 截断与 VACUUM 碎片整理
+        # 5. WAL 截断与 VACUUM 碎片整理（锁外独立连接，后台线程，超时 60s 熔断）
+        import asyncio as _aio
+
+        def _vacuum_work(path):
+            import sqlite3 as _sql
             try:
-                cur.execute("PRAGMA wal_checkpoint(TRUNCATE)")
+                c = _sql.connect(path, timeout=30.0)
+                try:
+                    c.execute("PRAGMA wal_checkpoint(TRUNCATE)")
+                except Exception:
+                    pass
+                try:
+                    c.execute("PRAGMA optimize")
+                except Exception:
+                    pass
+                try:
+                    c.execute("VACUUM")
+                except Exception:
+                    pass
+                try:
+                    c.close()
+                except Exception:
+                    pass
+                return True
             except Exception:
-                pass
-            try:
-                cur.execute("PRAGMA optimize")
-            except Exception:
-                pass
-            try:
-                cur.execute("VACUUM")
-            except Exception:
-                pass
+                return False
+
+        try:
+            if db_path and os.path.isfile(db_path):
+                await _aio.wait_for(_aio.to_thread(_vacuum_work, db_path), timeout=60)
+        except Exception:
+            pass
 
         # 6. 统计整理后大小
         size_after = 0
