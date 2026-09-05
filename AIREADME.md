@@ -45,7 +45,7 @@ astrbot_plugin_xbbot/
 └── pages/admin/              # 现代化 WebUI 管理控制台
     ├── index.html            # 单页面控制台骨架（13 大 Tab 视图、深浅色模式）
     ├── app.js                # 前端控制台主逻辑（Bridge 封装、API 通信、图表、搜索联动）
-    └── tabs/                 # Tab 拆分模块组件
+    └── (tabs/ 已于 v0.68.24 整包移除：12 文件全库零引用，Tab 全由 app.js 内联 TAB_LOADERS 承载)
 ```
 
 ---
